@@ -27,7 +27,51 @@
 					]
 				}
 			},
-			"response": []
+			"response": [
+				{
+					"id": "52399890-fdb1ae89-aa66-4ec2-be2a-a71f0979efa7",
+					"name": "Health",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "date",
+							"value": "Sun, 15 Feb 2026 00:33:34 GMT"
+						},
+						{
+							"key": "server",
+							"value": "uvicorn"
+						},
+						{
+							"key": "content-length",
+							"value": "15"
+						},
+						{
+							"key": "content-type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"responseTime": null,
+					"body": "{\n    \"status\": \"ok\"\n}"
+				}
+			]
 		}
 	]
 }
