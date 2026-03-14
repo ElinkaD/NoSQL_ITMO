@@ -1,77 +1,425 @@
 {
-	"info": {
-		"_postman_id": "52399890-5f7a1e89-9e19-4ffa-9894-10161ccf2f5a",
-		"name": "NoSQL_ITMO",
-		"description": "Коллекция запросов для тестирования **EventHub API - NoSQL Database Project**",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Health",
-			"id": "52399890-afa313f2-64d4-4e90-9c4b-d5e5b972ed53",
-			"protocolProfileBehavior": {
-				"disableBodyPruning": true
-			},
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:8080/health",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"health"
-					]
-				}
-			},
-			"response": [
-				{
-					"id": "52399890-fdb1ae89-aa66-4ec2-be2a-a71f0979efa7",
-					"name": "Health",
-					"originalRequest": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:8080/health",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "8080",
-							"path": [
-								"health"
-							]
-						}
-					},
-					"status": "OK",
-					"code": 200,
-					"_postman_previewlanguage": null,
-					"header": [
-						{
-							"key": "date",
-							"value": "Sun, 15 Feb 2026 00:33:34 GMT"
-						},
-						{
-							"key": "server",
-							"value": "uvicorn"
-						},
-						{
-							"key": "content-length",
-							"value": "15"
-						},
-						{
-							"key": "content-type",
-							"value": "application/json"
-						}
-					],
-					"cookie": [],
-					"responseTime": null,
-					"body": "{\n    \"status\": \"ok\"\n}"
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "52399890-5f7a1e89-9e19-4ffa-9894-10161ccf2f5a",
+    "name": "NoSQL_ITMO Lab 2",
+    "description": "Коллекция для проверки лабораторной работы №2: анонимные сессии на Redis.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "localhost"
+    },
+    {
+      "key": "port",
+      "value": "8080"
+    },
+    {
+      "key": "session_ttl",
+      "value": "60"
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "expired_session_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health without Cookie",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/health",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "health"
+          ]
+        },
+        "description": "GET /health без cookie должен вернуть только {\"status\":\"ok\"} и не устанавливать Set-Cookie."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Body is exactly {status: ok}', function () {",
+              "  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+              "});",
+              "",
+              "pm.test('Set-Cookie is absent', function () {",
+              "  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health with Invalid Cookie",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "X-Session-Id=bad"
+          }
+        ],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/health",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "health"
+          ]
+        },
+        "description": "GET /health с невалидной cookie не должен устанавливать Set-Cookie и не должен создавать сессию."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Body is exactly {status: ok}', function () {",
+              "  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+              "});",
+              "",
+              "pm.test('Set-Cookie is absent for invalid sid', function () {",
+              "  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Session",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/session",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "session"
+          ]
+        },
+        "description": "Первый POST /session должен создать новую сессию, вернуть 201 и пустое тело."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Response body is empty', function () {",
+              "  pm.expect(pm.response.text()).to.eql('');",
+              "});",
+              "",
+              "pm.test('Content-Length is 0', function () {",
+              "  pm.expect(pm.response.headers.get('Content-Length')).to.eql('0');",
+              "});",
+              "",
+              "const setCookie = pm.response.headers.get('Set-Cookie');",
+              "const pattern = new RegExp('^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=/; Max-Age=' + pm.collectionVariables.get('session_ttl') + '$');",
+              "const match = setCookie && setCookie.match(pattern);",
+              "",
+              "pm.test('Set-Cookie matches contract', function () {",
+              "  pm.expect(match).to.not.be.null;",
+              "});",
+              "",
+              "if (match) {",
+              "  pm.collectionVariables.set('session_id', match[1]);",
+              "  pm.collectionVariables.set('expired_session_id', match[1]);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refresh Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "X-Session-Id={{session_id}}"
+          }
+        ],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/session",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "session"
+          ]
+        },
+        "description": "Повторный POST /session с живой сессией должен вернуть 200, тот же sid и пустое тело."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response body is empty', function () {",
+              "  pm.expect(pm.response.text()).to.eql('');",
+              "});",
+              "",
+              "pm.test('Content-Length is 0', function () {",
+              "  pm.expect(pm.response.headers.get('Content-Length')).to.eql('0');",
+              "});",
+              "",
+              "const setCookie = pm.response.headers.get('Set-Cookie');",
+              "const pattern = new RegExp('^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=/; Max-Age=' + pm.collectionVariables.get('session_ttl') + '$');",
+              "const match = setCookie && setCookie.match(pattern);",
+              "",
+              "pm.test('Returned sid is the same', function () {",
+              "  pm.expect(match && match[1]).to.eql(pm.collectionVariables.get('session_id'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health with Active Cookie",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "X-Session-Id={{session_id}}"
+          }
+        ],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/health",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "health"
+          ]
+        },
+        "description": "GET /health с живой cookie должен вернуть ту же cookie, но не создавать новую сессию."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Body is exactly {status: ok}', function () {",
+              "  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+              "});",
+              "",
+              "const setCookie = pm.response.headers.get('Set-Cookie');",
+              "const pattern = new RegExp('^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=/; Max-Age=' + pm.collectionVariables.get('session_ttl') + '$');",
+              "const match = setCookie && setCookie.match(pattern);",
+              "",
+              "pm.test('Health returns the same sid', function () {",
+              "  pm.expect(match && match[1]).to.eql(pm.collectionVariables.get('session_id'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Session from Invalid Cookie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "X-Session-Id=bad"
+          }
+        ],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/session",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "session"
+          ]
+        },
+        "description": "POST /session с невалидной cookie должен создать новую сессию и вернуть 201."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Response body is empty', function () {",
+              "  pm.expect(pm.response.text()).to.eql('');",
+              "});",
+              "",
+              "const setCookie = pm.response.headers.get('Set-Cookie');",
+              "const pattern = /^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=\\/; Max-Age=\\d+$/;",
+              "const match = setCookie && setCookie.match(pattern);",
+              "",
+              "pm.test('New valid sid is returned', function () {",
+              "  pm.expect(match).to.not.be.null;",
+              "});",
+              "",
+              "pm.test('Returned sid is not the invalid one', function () {",
+              "  pm.expect(match && match[1]).to.not.eql('bad');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health with Expired Cookie",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "X-Session-Id={{expired_session_id}}"
+          }
+        ],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/health",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Запускайте после ожидания дольше APP_USER_SESSION_TTL секунд. Если сессия истекла, GET /health не должен возвращать Set-Cookie."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Body is exactly {status: ok}', function () {",
+              "  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+              "});",
+              "",
+              "pm.test('Set-Cookie is absent for expired sid', function () {",
+              "  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recreate Session after TTL Expiration",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "X-Session-Id={{expired_session_id}}"
+          }
+        ],
+        "url": {
+          "raw": "http://{{host}}:{{port}}/session",
+          "protocol": "http",
+          "host": [
+            "{{host}}"
+          ],
+          "port": "{{port}}",
+          "path": [
+            "session"
+          ]
+        },
+        "description": "Запускайте после ожидания дольше APP_USER_SESSION_TTL секунд. POST /session должен создать новую сессию и вернуть 201 с новым sid."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Response body is empty', function () {",
+              "  pm.expect(pm.response.text()).to.eql('');",
+              "});",
+              "",
+              "const setCookie = pm.response.headers.get('Set-Cookie');",
+              "const pattern = /^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=\\/; Max-Age=\\d+$/;",
+              "const match = setCookie && setCookie.match(pattern);",
+              "",
+              "pm.test('A new sid is returned', function () {",
+              "  pm.expect(match).to.not.be.null;",
+              "  pm.expect(match[1]).to.not.eql(pm.collectionVariables.get('expired_session_id'));",
+              "});",
+              "",
+              "if (match) {",
+              "  pm.collectionVariables.set('session_id', match[1]);",
+              "  pm.collectionVariables.set('expired_session_id', match[1]);",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
 }
