@@ -72,6 +72,18 @@
 					"body": "{\n    \"status\": \"ok\"\n}"
 				}
 			]
+		},
+		{
+			"name": "New Request",
+			"id": "52399890-b2dfe7a5-54e4-434f-b450-4dddd43eea8c",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
 		}
 	]
 }
