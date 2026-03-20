@@ -10,7 +10,6 @@ from redis import Redis
 
 COOKIE_NAME = "X-Session-Id"
 SID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
-SESSION_TTL = int(os.getenv("APP_USER_SESSION_TTL", "60"))
 CREATE_SESSION_SCRIPT = """
 if redis.call('EXISTS', KEYS[1]) == 1 then
   return 0
@@ -20,12 +19,22 @@ redis.call('EXPIRE', KEYS[1], ARGV[2])
 return 1
 """
 
+
+def require_env(name: str) -> str:
+    value = os.getenv(name)
+    if value is None:
+        raise RuntimeError(f"Environment variable {name} is required")
+    return value
+
+
+SESSION_TTL = int(require_env("APP_USER_SESSION_TTL"))
+
 app = FastAPI()
 redis_cli = Redis(
-    host=os.getenv("REDIS_HOST", "redis"),
-    port=int(os.getenv("REDIS_PORT", "6379")),
-    password=os.getenv("REDIS_PASSWORD") or None,
-    db=int(os.getenv("REDIS_DB", "0")),
+    host=require_env("REDIS_HOST"),
+    port=int(require_env("REDIS_PORT")),
+    password=require_env("REDIS_PASSWORD") or None,
+    db=int(require_env("REDIS_DB")),
     decode_responses=True,
 )
 
