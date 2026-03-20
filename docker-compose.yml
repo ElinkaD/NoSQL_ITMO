@@ -4,6 +4,44 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
+      APP_HOST: ${APP_HOST}
       APP_PORT: ${APP_PORT}
+      APP_USER_SESSION_TTL: ${APP_USER_SESSION_TTL}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB}
     ports:
       - "${APP_PORT}:${APP_PORT}"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PORT: ${REDIS_PORT}
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    command:
+      - sh
+      - -c
+      - |
+          if [ -n "$$REDIS_PASSWORD" ]; then
+            exec redis-server --appendonly yes --port "$$REDIS_PORT" --requirepass "$$REDIS_PASSWORD"
+          else
+            exec redis-server --appendonly yes --port "$$REDIS_PORT"
+          fi
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - |
+            if [ -n "$$REDIS_PASSWORD" ]; then
+              redis-cli -p "$$REDIS_PORT" -a "$$REDIS_PASSWORD" ping
+            else
+              redis-cli -p "$$REDIS_PORT" ping
+            fi
+      interval: 10s
+      timeout: 5s
+      retries: 5
