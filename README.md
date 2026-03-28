@@ -18,7 +18,24 @@ Backend-сервис платформы мероприятий для практ
 функциональность предыдущих лабораторных работ
 (проверяется в процессе автоматической проверки)
 
-## Lab 2: Anonymous Sessions on Redis
+## Lab 3: Users and Events on MongoDB
+
+Текущая версия сервиса реализует:
+
+- `GET /health` для проверки работоспособности;
+- `POST /session` для создания и продления анонимной сессии в Redis;
+- `POST /users` для регистрации пользователя с bcrypt-хэшем пароля;
+- `POST /auth/login` для входа пользователя в существующую или новую сессию;
+- `POST /auth/logout` для удаления текущей сессии и cookie;
+- `POST /events` для создания событий авторизованным пользователем;
+- `GET /events` для просмотра событий с фильтрацией по `title` и пагинацией через `limit`/`offset`.
+
+Хранилища:
+
+- Redis хранит сессии по ключу `sid:{session_id}` и, при авторизации, поле `user_id`;
+- MongoDB хранит коллекции `users` и `events` с индексами, требуемыми лабораторной работой.
+
+## Совместимость с Lab 2
 
 Сервис реализует:
 
@@ -48,6 +65,11 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
+MONGODB_DATABSE=eventhub
+MONGODB_USER=eventhub
+MONGODB_PASSWORD=eventhub
+MONGODB_HOST=mongodb
+MONGODB_PORT=27017
 ```
 
 ## Запуск и проверка
@@ -59,10 +81,18 @@ curl -i http://localhost:8080/health
 
 curl -i -X POST http://localhost:8080/session
 
+curl -i -X POST http://localhost:8080/users \
+  -H 'Content-Type: application/json' \
+  -d '{"full_name":"John Doe","username":"jdoe","password":"strong-pass"}'
+
+curl -i -X POST http://localhost:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"jdoe","password":"strong-pass"}'
+
 make stop
 ```
 
-Postman-коллекция лежит в `api/52399890-5f7a1e89-9e19-4ffa-9894-10161ccf2f5a.json`. В ней есть сценарии для:
+Postman-коллекция лежит в `api/52399890-5f7a1e89-9e19-4ffa-9894-10161ccf2f5a.json`. В ней есть сценарии для (пока без доработок по 3 лабе):
 - `health` без cookie;
 - `health` с валидной, невалидной и истекшей cookie;
 - создания новой сессии;

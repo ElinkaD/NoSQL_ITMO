@@ -11,10 +11,22 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: ${REDIS_DB}
+      REDIS_SOCKET_CONNECT_TIMEOUT: ${REDIS_SOCKET_CONNECT_TIMEOUT}
+      REDIS_SOCKET_TIMEOUT: ${REDIS_SOCKET_TIMEOUT}
+      MONGODB_DATABSE: ${MONGODB_DATABSE}
+      MONGODB_USER: ${MONGODB_USER}
+      MONGODB_PASSWORD: ${MONGODB_PASSWORD}
+      MONGODB_HOST: ${MONGODB_HOST}
+      MONGODB_PORT: ${MONGODB_PORT}
+      MONGODB_SERVER_SELECTION_TIMEOUT_MS: ${MONGODB_SERVER_SELECTION_TIMEOUT_MS}
+      MONGODB_CONNECT_TIMEOUT_MS: ${MONGODB_CONNECT_TIMEOUT_MS}
+      MONGODB_SOCKET_TIMEOUT_MS: ${MONGODB_SOCKET_TIMEOUT_MS}
     ports:
       - "${APP_PORT}:${APP_PORT}"
     depends_on:
       redis:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
 
   redis:
@@ -42,6 +54,27 @@ services:
             else
               redis-cli -p "$$REDIS_PORT" ping
             fi
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+    ports:
+      - "${MONGODB_PORT}:${MONGODB_PORT}"
+    command:
+      - --port
+      - "${MONGODB_PORT}"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --port "${MONGODB_PORT}" -u "${MONGODB_USER}"
+          -p "${MONGODB_PASSWORD}" --authenticationDatabase admin
+          --eval 'db.adminCommand({ ping: 1 }).ok'
       interval: 10s
       timeout: 5s
       retries: 5
