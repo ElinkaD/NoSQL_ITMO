@@ -9,6 +9,9 @@ use ${APP_MONGODB_DATABASE}
 db.createUser({
   user: "${APP_MONGODB_USER}",
   pwd: "${APP_MONGODB_PASSWORD}",
-  roles: [{ role: "readWrite", db: "${APP_MONGODB_DATABASE}" }]
+  roles: [
+    { role: "readWrite", db: "${APP_MONGODB_DATABASE}" },
+    { role: "dbOwner", db: "${APP_MONGODB_DATABASE}" }
+  ]
 })
 EOF
