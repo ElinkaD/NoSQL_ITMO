@@ -44,7 +44,6 @@ async def create_event(request: Request) -> Response:
         "address": payload.get("address"),
         "started_at": payload.get("started_at"),
         "finished_at": payload.get("finished_at"),
-        "description": payload.get("description"),
     }
     for field_name, value in required_string_fields.items():
         if not is_non_empty_string(value):
@@ -62,7 +61,6 @@ async def create_event(request: Request) -> Response:
     # формируем вставку о событие в mongodb
     document = {
         "title": payload["title"],
-        "description": payload["description"],
         "location": {
             "address": payload["address"],
         },
@@ -134,7 +132,6 @@ def list_events(request: Request) -> JSONResponse:
             {
                 "id": str(document["_id"]),
                 "title": document["title"],
-                "description": document["description"],
                 "location": document["location"],
                 "created_at": document["created_at"],
                 "created_by": document["created_by"],

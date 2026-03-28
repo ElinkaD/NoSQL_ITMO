@@ -10,10 +10,9 @@ from app.sessions import (
     create_session,
     delete_session,
     get_active_sid,
-    get_request_sid,
+    get_current_user_id,
     invalid_field_response,
     refresh_session_state,
-    session_exists,
     set_session_cookie,
 )
 
@@ -117,10 +116,15 @@ async def login(request: Request) -> Response:
 # при выходе просто удаляем сессию 
 @router.post("/auth/logout")
 def logout(request: Request) -> Response:
-    sid = get_request_sid(request)
-    if sid is not None and session_exists(sid):
-        delete_session(sid)
+    sid, user_id = get_current_user_id(request)
+    if user_id is None:
+        response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
+        if sid is not None:
+            refresh_session_state(sid)
+            set_session_cookie(response, sid)
+        return response
 
+    delete_session(sid)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
-    clear_session_cookie(response, sid or "")
+    clear_session_cookie(response, sid)
     return response
