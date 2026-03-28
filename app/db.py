@@ -4,7 +4,7 @@ from redis import Redis
 
 from app.config import (
     MONGODB_CONNECT_TIMEOUT_MS,
-    MONGODB_DATABSE,
+    MONGODB_DATABASE,
     MONGODB_HOST,
     MONGODB_PASSWORD,
     MONGODB_PORT,
@@ -45,7 +45,7 @@ mongo_cli = MongoClient(
     connectTimeoutMS=MONGODB_CONNECT_TIMEOUT_MS,
     socketTimeoutMS=MONGODB_SOCKET_TIMEOUT_MS,
 )
-mongo_db = mongo_cli[MONGODB_DATABSE]
+mongo_db = mongo_cli[MONGODB_DATABASE]
 users_collection: Collection = mongo_db["users"]
 events_collection: Collection = mongo_db["events"]
 

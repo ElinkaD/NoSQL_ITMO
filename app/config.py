@@ -7,14 +7,6 @@ def require_env(name: str) -> str:
         raise RuntimeError(f"Environment variable {name} is required")
     return value
 
-
-def require_mongodb_database() -> str:
-    value = os.getenv("MONGODB_DATABSE")
-    if value is None:
-        raise RuntimeError("Environment variable MONGODB_DATABSE is required")
-    return value
-
-
 APP_HOST = require_env("APP_HOST")
 APP_PORT = int(require_env("APP_PORT"))
 SESSION_TTL = int(require_env("APP_USER_SESSION_TTL"))
@@ -30,7 +22,7 @@ MONGODB_HOST = require_env("MONGODB_HOST")
 MONGODB_PORT = int(require_env("MONGODB_PORT"))
 MONGODB_USER = require_env("MONGODB_USER") or None
 MONGODB_PASSWORD = require_env("MONGODB_PASSWORD") or None
-MONGODB_DATABSE = require_mongodb_database()
+MONGODB_DATABASE = require_env("MONGODB_DATABASE")
 MONGODB_SERVER_SELECTION_TIMEOUT_MS = int(require_env("MONGODB_SERVER_SELECTION_TIMEOUT_MS"))
 MONGODB_CONNECT_TIMEOUT_MS = int(require_env("MONGODB_CONNECT_TIMEOUT_MS"))
 MONGODB_SOCKET_TIMEOUT_MS = int(require_env("MONGODB_SOCKET_TIMEOUT_MS"))
