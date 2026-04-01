@@ -1,0 +1,473 @@
+{
+	"info": {
+		"_postman_id": "52399890-00027d8f-4e9b-41d2-b774-fbd716e8316d",
+		"name": "NoSQL_ITMO Lab 2",
+		"description": "Коллекция для проверки лабораторной работы №2: анонимные сессии на Redis.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health without Cookie",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 200', function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Body is exactly {status: ok}', function () {",
+							"  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+							"});",
+							"",
+							"pm.test('Set-Cookie is absent', function () {",
+							"  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+							"});"
+						],
+						"id": "786e3a4b-b0cc-4b08-aa19-5fbbea8b3ce9"
+					}
+				}
+			],
+			"id": "52399890-c439ab85-1a20-4c41-9a13-279b2b9e29d6",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/health",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"health"
+					]
+				},
+				"description": "GET /health без cookie должен вернуть только {\"status\":\"ok\"} и не устанавливать Set-Cookie."
+			},
+			"response": []
+		},
+		{
+			"name": "Health with Invalid Cookie",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 200', function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Body is exactly {status: ok}', function () {",
+							"  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+							"});",
+							"",
+							"pm.test('Set-Cookie is absent for invalid sid', function () {",
+							"  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+							"});"
+						],
+						"id": "6cc0292c-76b0-4a79-890e-0cecca462ef5"
+					}
+				}
+			],
+			"id": "52399890-ff053073-1e66-4418-94ee-b6cb13e65063",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "X-Session-Id=bad"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/health",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"health"
+					]
+				},
+				"description": "GET /health с невалидной cookie не должен устанавливать Set-Cookie и не должен создавать сессию."
+			},
+			"response": []
+		},
+		{
+			"name": "Create Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 201', function () {",
+							"  pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test('Response body is empty', function () {",
+							"  pm.expect(pm.response.text()).to.eql('');",
+							"});",
+							"",
+							"pm.test('Content-Length is 0', function () {",
+							"  pm.expect(pm.response.headers.get('Content-Length')).to.eql('0');",
+							"});",
+							"",
+							"const setCookie = pm.response.headers.get('Set-Cookie');",
+							"const pattern = new RegExp('^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=/; Max-Age=' + pm.collectionVariables.get('session_ttl') + '$');",
+							"const match = setCookie && setCookie.match(pattern);",
+							"",
+							"pm.test('Set-Cookie matches contract', function () {",
+							"  pm.expect(match).to.not.be.null;",
+							"});",
+							"",
+							"if (match) {",
+							"  pm.collectionVariables.set('session_id', match[1]);",
+							"  pm.collectionVariables.set('expired_session_id', match[1]);",
+							"}"
+						],
+						"id": "9255aa7f-5005-4fab-9148-d8da95cd9ec6"
+					}
+				}
+			],
+			"id": "52399890-aeb40651-5082-4964-a071-94831270bd59",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/session",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"session"
+					]
+				},
+				"description": "Первый POST /session должен создать новую сессию, вернуть 201 и пустое тело."
+			},
+			"response": []
+		},
+		{
+			"name": "Refresh Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 200', function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response body is empty', function () {",
+							"  pm.expect(pm.response.text()).to.eql('');",
+							"});",
+							"",
+							"pm.test('Content-Length is 0', function () {",
+							"  pm.expect(pm.response.headers.get('Content-Length')).to.eql('0');",
+							"});",
+							"",
+							"const setCookie = pm.response.headers.get('Set-Cookie');",
+							"const pattern = new RegExp('^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=/; Max-Age=' + pm.collectionVariables.get('session_ttl') + '$');",
+							"const match = setCookie && setCookie.match(pattern);",
+							"",
+							"pm.test('Returned sid is the same', function () {",
+							"  pm.expect(match && match[1]).to.eql(pm.collectionVariables.get('session_id'));",
+							"});"
+						],
+						"id": "d257561e-4553-490f-9201-6eee78ef81f7"
+					}
+				}
+			],
+			"id": "52399890-51c79230-efb6-4c1b-b9b5-b21a65b79c84",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "X-Session-Id={{session_id}}"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/session",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"session"
+					]
+				},
+				"description": "Повторный POST /session с живой сессией должен вернуть 200, тот же sid и пустое тело."
+			},
+			"response": []
+		},
+		{
+			"name": "Health with Active Cookie",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 200', function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Body is exactly {status: ok}', function () {",
+							"  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+							"});",
+							"",
+							"const setCookie = pm.response.headers.get('Set-Cookie');",
+							"const pattern = new RegExp('^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=/; Max-Age=' + pm.collectionVariables.get('session_ttl') + '$');",
+							"const match = setCookie && setCookie.match(pattern);",
+							"",
+							"pm.test('Health returns the same sid', function () {",
+							"  pm.expect(match && match[1]).to.eql(pm.collectionVariables.get('session_id'));",
+							"});"
+						],
+						"id": "c0598685-c91b-4bcb-9125-415318079796"
+					}
+				}
+			],
+			"id": "52399890-8183dbc0-722e-4422-95a3-b83b66d3d2e5",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "X-Session-Id={{session_id}}"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/health",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"health"
+					]
+				},
+				"description": "GET /health с живой cookie должен вернуть ту же cookie, но не создавать новую сессию."
+			},
+			"response": []
+		},
+		{
+			"name": "Create Session from Invalid Cookie",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 201', function () {",
+							"  pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test('Response body is empty', function () {",
+							"  pm.expect(pm.response.text()).to.eql('');",
+							"});",
+							"",
+							"const setCookie = pm.response.headers.get('Set-Cookie');",
+							"const pattern = /^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=\\/; Max-Age=\\d+$/;",
+							"const match = setCookie && setCookie.match(pattern);",
+							"",
+							"pm.test('New valid sid is returned', function () {",
+							"  pm.expect(match).to.not.be.null;",
+							"});",
+							"",
+							"pm.test('Returned sid is not the invalid one', function () {",
+							"  pm.expect(match && match[1]).to.not.eql('bad');",
+							"});"
+						],
+						"id": "d0ec3a19-e650-4472-9388-c0b583a4c6bd"
+					}
+				}
+			],
+			"id": "52399890-6061611d-295a-46c2-aa53-eac0f151da18",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "X-Session-Id=bad"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/session",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"session"
+					]
+				},
+				"description": "POST /session с невалидной cookie должен создать новую сессию и вернуть 201."
+			},
+			"response": []
+		},
+		{
+			"name": "Health with Expired Cookie",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 200', function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Body is exactly {status: ok}', function () {",
+							"  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+							"});",
+							"",
+							"pm.test('Set-Cookie is absent for expired sid', function () {",
+							"  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+							"});"
+						],
+						"id": "05dd5fb0-1124-4692-bc39-f508d36ed628"
+					}
+				}
+			],
+			"id": "52399890-282e18e4-fba5-465d-bf68-8357d35c50b2",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "X-Session-Id={{expired_session_id}}"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/health",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Запускайте после ожидания дольше APP_USER_SESSION_TTL секунд. Если сессия истекла, GET /health не должен возвращать Set-Cookie."
+			},
+			"response": []
+		},
+		{
+			"name": "Recreate Session after TTL Expiration",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status is 201', function () {",
+							"  pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test('Response body is empty', function () {",
+							"  pm.expect(pm.response.text()).to.eql('');",
+							"});",
+							"",
+							"const setCookie = pm.response.headers.get('Set-Cookie');",
+							"const pattern = /^X-Session-Id=([0-9a-f]{32}); HttpOnly; Path=\\/; Max-Age=\\d+$/;",
+							"const match = setCookie && setCookie.match(pattern);",
+							"",
+							"pm.test('A new sid is returned', function () {",
+							"  pm.expect(match).to.not.be.null;",
+							"  pm.expect(match[1]).to.not.eql(pm.collectionVariables.get('expired_session_id'));",
+							"});",
+							"",
+							"if (match) {",
+							"  pm.collectionVariables.set('session_id', match[1]);",
+							"  pm.collectionVariables.set('expired_session_id', match[1]);",
+							"}"
+						],
+						"id": "b4876dbb-ad36-4076-b8d1-18f9807e6172"
+					}
+				}
+			],
+			"id": "52399890-272e8937-9285-44e8-9c7a-054c0eb370aa",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Cookie",
+						"value": "X-Session-Id={{expired_session_id}}"
+					}
+				],
+				"url": {
+					"raw": "http://{{host}}:{{port}}/session",
+					"protocol": "http",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"session"
+					]
+				},
+				"description": "Запускайте после ожидания дольше APP_USER_SESSION_TTL секунд. POST /session должен создать новую сессию и вернуть 201 с новым sid."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "host",
+			"value": "localhost"
+		},
+		{
+			"key": "port",
+			"value": "8080"
+		},
+		{
+			"key": "session_ttl",
+			"value": "60"
+		},
+		{
+			"key": "session_id",
+			"value": ""
+		},
+		{
+			"key": "expired_session_id",
+			"value": ""
+		}
+	]
+}
