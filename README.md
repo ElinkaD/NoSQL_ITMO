@@ -163,7 +163,7 @@ docker compose --env-file .env.local exec -T shard1-01 \
 
 Для проверки приложения используйте коллекцию
 
-- [api/52399890-lab4-3f0f7c5a-collection.json](/home/elina/itmo/NoSQL_ITMO/api/52399890-lab4-3f0f7c5a-collection.json)
+- [api/52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595.json](/home/elina/itmo/NoSQL_ITMO/api/52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595.json)
 
 Коллекция покрывает
 
