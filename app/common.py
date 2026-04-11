@@ -1,10 +1,13 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 
-# валидация входных данных 
+from bson import ObjectId
+
+# валидация входных данных
 RFC3339_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
+ALLOWED_EVENT_CATEGORIES = {"meetup", "concert", "exhibition", "party", "other"}
 
 
 def is_non_empty_string(value: object) -> bool:
@@ -29,3 +32,33 @@ def parse_uint_parameter(value: str | None) -> int | None:
     if not value.isdigit():
         return None
     return int(value)
+
+
+def parse_object_id(value: str | None) -> ObjectId | None:
+    if value is None or not ObjectId.is_valid(value):
+        return None
+    return ObjectId(value)
+
+
+def parse_yyyymmdd(value: str | None) -> date | None:
+    if value is None:
+        return None
+    if len(value) != 8 or not value.isdigit():
+        return None
+
+    try:
+        return datetime.strptime(value, "%Y%m%d").date()
+    except ValueError:
+        return None
+
+
+def is_valid_event_category(value: object) -> bool:
+    return isinstance(value, str) and value in ALLOWED_EVENT_CATEGORIES
+
+
+def parse_non_empty_string_parameter(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if not is_non_empty_string(value):
+        return None
+    return value

@@ -167,10 +167,9 @@ def invalid_field_response(
     is_parameter: bool = False,
     refresh: bool = True,
 ) -> JSONResponse:
-    suffix = "parameter" if is_parameter else "field"
     response = JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content={"message": f'invalid "{field_name}" {suffix}'},
+        content={"message": f'invalid "{field_name}" field'},
     )
     if sid is not None:
         if refresh:

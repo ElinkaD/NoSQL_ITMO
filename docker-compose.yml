@@ -26,8 +26,10 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      mongodb:
+      mongos:
         condition: service_healthy
+      mongo-setup:
+        condition: service_completed_successfully
 
   redis:
     image: redis:7-alpine
@@ -58,29 +60,251 @@ services:
       timeout: 5s
       retries: 5
 
-  mongodb:
+  configsvr01:
     image: mongo:8.0
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE}
-      APP_MONGODB_DATABASE: ${MONGODB_DATABASE}
-      APP_MONGODB_USER: ${MONGODB_USER}
-      APP_MONGODB_PASSWORD: ${MONGODB_PASSWORD}
-    ports:
-      - "${MONGODB_PORT}:${MONGODB_PORT}"
     command:
+      - mongod
+      - --configsvr
+      - --replSet
+      - configReplSet
+      - --bind_ip_all
       - --port
-      - "${MONGODB_PORT}"
+      - "27019"
+    ports:
+      - "27019:27019"
     volumes:
-      - ./mongodb/init-user.sh:/docker-entrypoint-initdb.d/init-user.sh:ro
+      - configsvr01_data:/data/db
     healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          mongosh --quiet --port "${MONGODB_PORT}" -u "${MONGODB_USER}"
-          -p "${MONGODB_PASSWORD}" --authenticationDatabase admin
-          --eval 'db.adminCommand({ ping: 1 }).ok'
+      test: ["CMD-SHELL", "mongosh --quiet --port 27019 --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  configsvr02:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --configsvr
+      - --replSet
+      - configReplSet
+      - --bind_ip_all
+      - --port
+      - "27020"
+    ports:
+      - "27020:27020"
+    volumes:
+      - configsvr02_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27020 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  configsvr03:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --configsvr
+      - --replSet
+      - configReplSet
+      - --bind_ip_all
+      - --port
+      - "27021"
+    ports:
+      - "27021:27021"
+    volumes:
+      - configsvr03_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27021 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shard1-01:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --shardsvr
+      - --replSet
+      - shard1ReplSet
+      - --bind_ip_all
+      - --port
+      - "27118"
+    ports:
+      - "27118:27118"
+    volumes:
+      - shard1_01_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27118 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shard1-02:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --shardsvr
+      - --replSet
+      - shard1ReplSet
+      - --bind_ip_all
+      - --port
+      - "27119"
+    ports:
+      - "27119:27119"
+    volumes:
+      - shard1_02_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27119 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shard1-03:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --shardsvr
+      - --replSet
+      - shard1ReplSet
+      - --bind_ip_all
+      - --port
+      - "27120"
+    ports:
+      - "27120:27120"
+    volumes:
+      - shard1_03_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27120 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shard2-01:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --shardsvr
+      - --replSet
+      - shard2ReplSet
+      - --bind_ip_all
+      - --port
+      - "27218"
+    ports:
+      - "27218:27218"
+    volumes:
+      - shard2_01_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27218 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shard2-02:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --shardsvr
+      - --replSet
+      - shard2ReplSet
+      - --bind_ip_all
+      - --port
+      - "27219"
+    ports:
+      - "27219:27219"
+    volumes:
+      - shard2_02_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27219 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  shard2-03:
+    image: mongo:8.0
+    command:
+      - mongod
+      - --shardsvr
+      - --replSet
+      - shard2ReplSet
+      - --bind_ip_all
+      - --port
+      - "27220"
+    ports:
+      - "27220:27220"
+    volumes:
+      - shard2_03_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27220 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongos:
+    image: mongo:8.0
+    command:
+      - mongos
+      - --configdb
+      - configReplSet/configsvr01:27019,configsvr02:27020,configsvr03:27021
+      - --bind_ip_all
+      - --port
+      - "27017"
+    ports:
+      - "${MONGODB_PORT}:${MONGODB_PORT}"
+    restart: unless-stopped
+    depends_on:
+      configsvr01:
+        condition: service_started
+      configsvr02:
+        condition: service_started
+      configsvr03:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --port 27017 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mongo-setup:
+    image: mongo:8.0
+    depends_on:
+      configsvr01:
+        condition: service_healthy
+      configsvr02:
+        condition: service_healthy
+      configsvr03:
+        condition: service_healthy
+      shard1-01:
+        condition: service_healthy
+      shard1-02:
+        condition: service_healthy
+      shard1-03:
+        condition: service_healthy
+      shard2-01:
+        condition: service_healthy
+      shard2-02:
+        condition: service_healthy
+      shard2-03:
+        condition: service_healthy
+      mongos:
+        condition: service_started
+    environment:
+      MONGODB_DATABASE: ${MONGODB_DATABASE}
+      MONGODB_APP_USER: ${MONGODB_APP_USER}
+      MONGODB_APP_PASSWORD: ${MONGODB_APP_PASSWORD}
+    volumes:
+      - ./mongodb/init-cluster.sh:/scripts/init-cluster.sh:ro
+    command:
+      - sh
+      - /scripts/init-cluster.sh
+
+volumes:
+  configsvr01_data:
+  configsvr02_data:
+  configsvr03_data:
+  shard1_01_data:
+  shard1_02_data:
+  shard1_03_data:
+  shard2_01_data:
+  shard2_02_data:
+  shard2_03_data:
