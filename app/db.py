@@ -50,13 +50,10 @@ users_collection: Collection = mongo_db["users"]
 events_collection: Collection = mongo_db["events"]
 
 
-# app/db.py
-
 def ensure_indexes() -> None:
     users_collection.create_index([("username", ASCENDING)], unique=True)
     users_collection.create_index([("full_name", ASCENDING)])
-
-    events_collection.create_index([("title", ASCENDING)], unique=True)
+    events_collection.create_index([("title", ASCENDING)])
     events_collection.create_index([("title", ASCENDING), ("created_by", ASCENDING)])
     events_collection.create_index([("created_by", ASCENDING)])
     events_collection.create_index([("created_by", ASCENDING), ("created_at", ASCENDING)])
