@@ -209,6 +209,19 @@ async def create_event(request: Request) -> Response:
     if city is not None and not is_non_empty_string(city):
         return invalid_field_response("city", sid)
 
+    try:
+        duplicate_event = events_collection.find_one({"title": payload["title"]}, {"_id": 1})
+    except PyMongoError as exc:
+        raise StorageUnavailableError("mongodb") from exc
+    if duplicate_event is not None:
+        response = JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"message": "event already exists"},
+        )
+        refresh_session_state(sid, user_id)
+        set_session_cookie(response, sid)
+        return response
+
     # формируем вставку о событие в mongodb
     document = {
         "title": payload["title"],

@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 import bcrypt
 from fastapi import APIRouter, Request, Response, status
@@ -8,9 +9,12 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from app.common import (
     is_non_empty_string,
+    is_valid_event_category,
     parse_non_empty_string_parameter,
     parse_object_id,
+    parse_rfc3339,
     parse_uint_parameter,
+    parse_yyyymmdd,
 )
 from app.db import StorageUnavailableError, events_collection, users_collection
 from app.sessions import (
@@ -75,6 +79,27 @@ def user_events_not_found_response(sid: str | None) -> JSONResponse:
     if sid is not None:
         set_session_cookie(response, sid)
     return response
+
+
+def matches_started_date_range(
+    document: dict[str, object],
+    started_date_from: date | None,
+    started_date_to: date | None,
+) -> bool:
+    started_at_raw = document.get("started_at")
+    if not isinstance(started_at_raw, str):
+        return False
+
+    started_at = parse_rfc3339(started_at_raw)
+    if started_at is None:
+        return False
+
+    started_at_date = started_at.date()
+    if started_date_from is not None and started_at_date < started_date_from:
+        return False
+    if started_date_to is not None and started_at_date > started_date_to:
+        return False
+    return True
 
 
 # регистрация нового пользователя
@@ -200,6 +225,28 @@ def get_user(request: Request, user_id: str) -> JSONResponse:
 @router.get("/users/{user_id}/events")
 def list_user_events(request: Request, user_id: str) -> JSONResponse:
     sid = get_active_sid(request, suppress_errors=True)
+    raw_limit = request.query_params.get("limit")
+    raw_offset = request.query_params.get("offset")
+
+    limit = parse_uint_parameter(raw_limit)
+    if raw_limit is not None and limit is None:
+        return invalid_field_response("limit", sid, is_parameter=True, refresh=False)
+
+    offset = parse_uint_parameter(raw_offset)
+    if raw_offset is not None and offset is None:
+        return invalid_field_response("offset", sid, is_parameter=True, refresh=False)
+
+    started_date_from = parse_yyyymmdd(request.query_params.get("date_from"))
+    if request.query_params.get("date_from") is not None and started_date_from is None:
+        return invalid_field_response("date_from", sid, is_parameter=True, refresh=False)
+
+    started_date_to = parse_yyyymmdd(request.query_params.get("date_to"))
+    if request.query_params.get("date_to") is not None and started_date_to is None:
+        return invalid_field_response("date_to", sid, is_parameter=True, refresh=False)
+
+    if started_date_from is not None and started_date_to is not None and started_date_from > started_date_to:
+        return invalid_field_response("date_to", sid, is_parameter=True, refresh=False)
+
     parsed_user_id = parse_object_id(user_id)
     if parsed_user_id is None:
         return user_events_not_found_response(sid)
@@ -212,12 +259,66 @@ def list_user_events(request: Request, user_id: str) -> JSONResponse:
     if user_document is None:
         return user_events_not_found_response(sid)
 
+    mongo_filter: dict[str, object] = {"created_by": str(parsed_user_id)}
+
+    title = request.query_params.get("title")
+    if title is not None:
+        mongo_filter["title"] = {"$regex": re.escape(title)}
+
+    event_id = request.query_params.get("id")
+    if event_id is not None:
+        parsed_event_id = parse_object_id(event_id)
+        if parsed_event_id is None:
+            return invalid_field_response("id", sid, is_parameter=True, refresh=False)
+        mongo_filter["_id"] = parsed_event_id
+
+    category = request.query_params.get("category")
+    if category is not None:
+        if not is_valid_event_category(category):
+            return invalid_field_response("category", sid, is_parameter=True, refresh=False)
+        mongo_filter["category"] = category
+
+    price_from = parse_uint_parameter(request.query_params.get("price_from"))
+    if request.query_params.get("price_from") is not None and price_from is None:
+        return invalid_field_response("price_from", sid, is_parameter=True, refresh=False)
+
+    price_to = parse_uint_parameter(request.query_params.get("price_to"))
+    if request.query_params.get("price_to") is not None and price_to is None:
+        return invalid_field_response("price_to", sid, is_parameter=True, refresh=False)
+
+    if price_from is not None or price_to is not None:
+        if price_from is not None and price_to is not None and price_from > price_to:
+            return invalid_field_response("price_to", sid, is_parameter=True, refresh=False)
+
+        price_filter: dict[str, int] = {}
+        if price_from is not None:
+            price_filter["$gte"] = price_from
+        if price_to is not None:
+            price_filter["$lte"] = price_to
+        mongo_filter["price"] = price_filter
+
+    city = request.query_params.get("city")
+    if city is not None:
+        if not is_non_empty_string(city):
+            return invalid_field_response("city", sid, is_parameter=True, refresh=False)
+        mongo_filter["location.city"] = city
+
     try:
-        documents = list(
-            events_collection.find({"created_by": str(parsed_user_id)}).sort("created_at", DESCENDING)
-        )
+        documents = list(events_collection.find(mongo_filter).sort("created_at", DESCENDING))
     except PyMongoError as exc:
         raise StorageUnavailableError("mongodb") from exc
+
+    if started_date_from is not None or started_date_to is not None:
+        documents = [
+            document
+            for document in documents
+            if matches_started_date_range(document, started_date_from, started_date_to)
+        ]
+
+    if offset is not None:
+        documents = documents[offset:]
+    if limit is not None:
+        documents = documents[:limit]
 
     response = JSONResponse(
         content={"events": [serialize_event(document) for document in documents], "count": len(documents)}
