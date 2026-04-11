@@ -1,0 +1,1399 @@
+{
+	"info": {
+		"_postman_id": "52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595",
+		"name": "NoSQL_ITMO Labs",
+		"description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки и негативные сценарии.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Lab 2 Sessions",
+			"item": [
+				{
+					"name": "Health without Cookie",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Body is exactly status ok', function () {",
+									"  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+									"});",
+									"",
+									"pm.test('Set-Cookie is absent', function () {",
+									"  pm.expect(pm.response.headers.has('Set-Cookie')).to.eql(false);",
+									"});"
+								],
+								"id": "8539c758-e8e4-47b8-b114-4c1e94bc7059"
+							}
+						}
+					],
+					"id": "52399890-8e6c09dc-5e31-4b89-b0f6-137ef025fdf7",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/health",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Health with Invalid Cookie",
+					"id": "52399890-471472c2-66f4-4a63-a189-b6aadaa9855d",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id=bad"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/health",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"const setCookie = pm.response.headers.get('Set-Cookie');",
+									"const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+									"if (match) {",
+									"  pm.collectionVariables.set('session_sid', match[1]);",
+									"  pm.collectionVariables.set('expired_session_sid', match[1]);",
+									"}"
+								],
+								"id": "04fe6be6-2301-47b0-943f-91f89b11f5ee"
+							}
+						}
+					],
+					"id": "52399890-b54fd933-6eae-4fc3-b961-f4ee2d5f2231",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/session",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"session"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Session",
+					"id": "52399890-5748bfb4-c9cd-4989-9323-88649b20f9c0",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{session_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/session",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"session"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Health with Active Cookie",
+					"id": "52399890-d145b828-75d1-43d2-80a8-9c5b84085877",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{session_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/health",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Session from Invalid Cookie",
+					"id": "52399890-b1307954-5352-4abc-af7f-ad320503c1c9",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id=bad"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/session",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"session"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Health with Expired Cookie",
+					"id": "52399890-73f9b37e-690a-4b78-b9cf-0a46935ca006",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{expired_session_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/health",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"health"
+							]
+						},
+						"description": "Запускайте после ожидания дольше APP_USER_SESSION_TTL секунд"
+					},
+					"response": []
+				},
+				{
+					"name": "Recreate Session after TTL Expiration",
+					"id": "52399890-2aa206e7-889d-491c-bcf0-fe4479fdfd6a",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{expired_session_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/session",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"session"
+							]
+						},
+						"description": "Запускайте после ожидания дольше APP_USER_SESSION_TTL секунд"
+					},
+					"response": []
+				}
+			],
+			"id": "52399890-88425988-8e09-4f10-ad0a-aa118a5e40df",
+			"description": "Коллекция для проверки лабораторной работы №2: анонимные сессии на Redis."
+		},
+		{
+			"name": "Lab 3 Users and Auth",
+			"item": [
+				{
+					"name": "Create Primary User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f5118908-7b38-4d6f-a8e4-84166077f6e5",
+								"exec": [
+									"const setCookie = pm.response.headers.get('Set-Cookie');",
+									"const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+									"if (match) {",
+									"  pm.collectionVariables.set('primary_sid', match[1]);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"id": "52399890-a5f172d7-d071-4094-8d79-d8f3a0067d3e",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"{{primary_full_name}}\",\n    \"username\": \"{{primary_username}}\",\n    \"password\": \"{{primary_password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Find Primary User by Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"if (body.users && body.users.length > 0) {",
+									"  pm.collectionVariables.set('primary_user_id', body.users[0].id);",
+									"}"
+								],
+								"id": "d9ddbb5f-4c77-4e19-887a-bffa3238cf25"
+							}
+						}
+					],
+					"id": "52399890-9e7f4f88-c1b8-4e76-8727-055d43b18f6f",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users?name={{primary_name_query}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "{{primary_name_query}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Secondary User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const setCookie = pm.response.headers.get('Set-Cookie');",
+									"const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+									"if (match) {",
+									"  pm.collectionVariables.set('secondary_sid', match[1]);",
+									"}"
+								],
+								"id": "61204aa5-1e1b-4e2f-ba89-7e3b39e9b1ab"
+							}
+						}
+					],
+					"id": "52399890-78b8fdb8-d4cc-44dc-bf87-c396dcae994d",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"{{secondary_full_name}}\",\n  \"username\": \"{{secondary_username}}\",\n  \"password\": \"{{secondary_password}}\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Find Secondary User by Name",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"if (body.users && body.users.length > 0) {",
+									"  pm.collectionVariables.set('secondary_user_id', body.users[0].id);",
+									"}"
+								],
+								"id": "5802497e-96cb-4478-82b9-8f625a1b024d"
+							}
+						}
+					],
+					"id": "52399890-3ec5e2c1-13d6-4b68-b489-89338e35f790",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{secondary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users?name={{secondary_name_query}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "{{secondary_name_query}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Duplicate User",
+					"id": "52399890-90b7d13a-7cec-4f78-a820-bcbf2f6af2d4",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"{{primary_full_name}}\",\n  \"username\": \"{{primary_username}}\",\n  \"password\": \"{{primary_password}}\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users by Name",
+					"id": "52399890-de74ca72-523a-4d0c-a5bd-194baea188cc",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users?name={{primary_name_query}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "{{primary_name_query}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users by Id",
+					"id": "52399890-eb8d73b4-a3d7-4742-8ce9-6c763c93e1cd",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users?id={{primary_user_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{primary_user_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users Invalid Id",
+					"id": "52399890-7d4bad4e-6f8a-4d3b-81d1-6f1110003e7c",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users?id=bad",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "bad"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Card",
+					"id": "52399890-f366f055-7c15-4cf3-9c54-dc2519929509",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users/{{primary_user_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users",
+								"{{primary_user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Missing User Card",
+					"id": "52399890-65cd53b1-01ab-4dd9-b72b-1ce3bc074259",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users/000000000000000000000000",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users",
+								"000000000000000000000000"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Primary User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const setCookie = pm.response.headers.get('Set-Cookie');",
+									"const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+									"if (match) {",
+									"  pm.collectionVariables.set('primary_sid', match[1]);",
+									"}"
+								],
+								"id": "352b4453-26df-4cf5-82bb-a6d0e9d5b290"
+							}
+						}
+					],
+					"id": "52399890-b38683f8-34e2-4bab-a9b0-30fbdbdea728",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{primary_username}}\",\n  \"password\": \"{{primary_password}}\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/auth/login",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Secondary User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const setCookie = pm.response.headers.get('Set-Cookie');",
+									"const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+									"if (match) {",
+									"  pm.collectionVariables.set('secondary_sid', match[1]);",
+									"}"
+								],
+								"id": "f7c30f54-a64f-486c-9e5b-758fd38a270f"
+							}
+						}
+					],
+					"id": "52399890-678e06ad-915b-4806-ac66-47560c9997a2",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{secondary_username}}\",\n  \"password\": \"{{secondary_password}}\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/auth/login",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Invalid Credentials",
+					"id": "52399890-8ab08812-5d11-4c9f-8434-33bd89fa1d12",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{primary_username}}\",\n  \"password\": \"wrong-pass\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/auth/login",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout Primary User",
+					"id": "52399890-ea30b42a-f37a-4ef9-9c5b-44b6fd47d21e",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/auth/logout",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout Without Auth",
+					"id": "52399890-4f0b8969-36c0-4b5c-b41f-e08de06cb1d2",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/auth/logout",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"auth",
+								"logout"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "52399890-14badf77-9630-4125-8793-c872cf40751c"
+		},
+		{
+			"name": "Lab 4",
+			"item": [
+				{
+					"name": "Create Primary Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"if (body.id) {",
+									"  pm.collectionVariables.set('primary_event_id', body.id);",
+									"}"
+								],
+								"id": "e03d6e14-6e03-4c90-955d-6ce1e27b1848"
+							}
+						}
+					],
+					"id": "52399890-87b35a37-110a-4022-930c-437a185aefb6",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"{{primary_event_title}}\",\n  \"address\": \"{{event_address}}\",\n  \"description\": \"{{event_description}}\",\n  \"started_at\": \"{{started_at}}\",\n  \"finished_at\": \"{{finished_at}}\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Primary Event",
+					"id": "52399890-4e95727f-930b-410f-9033-9e16ba4489fd",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category\": \"{{event_category}}\",\n  \"price\": {{event_price}},\n  \"city\": \"{{event_city}}\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"{{primary_event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Primary Event Remove City",
+					"id": "52399890-e5b66b09-bfcf-4126-90ad-e14f3619904c",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"city\": \"\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"{{primary_event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Event Invalid Category",
+					"id": "52399890-3b05c6ce-0a4d-43d5-b1f5-789fa05e9999",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category\": \"invalid-category\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"{{primary_event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Event Without Auth",
+					"id": "52399890-5c64d2b3-f3e4-45ba-ae4c-398799045119",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category\": \"party\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"{{primary_event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Event as Other User",
+					"id": "52399890-97b0c317-6b4b-4309-a446-864997d1237e",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{secondary_sid}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category\": \"party\"\n}"
+						},
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"{{primary_event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event Card",
+					"id": "52399890-459ba73c-7fe3-4922-9126-cf9db5209557",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"{{primary_event_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Missing Event Card",
+					"id": "52399890-b2dd824f-5080-4b82-b628-5d7b11fc9fab",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events/000000000000000000000000",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events",
+								"000000000000000000000000"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Events by Title",
+					"id": "52399890-74d41820-7495-48b0-9ca5-6fca447db647",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events?title={{primary_event_title}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events"
+							],
+							"query": [
+								{
+									"key": "title",
+									"value": "{{primary_event_title}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Events by Lab 4 Filters",
+					"id": "52399890-55065c88-4682-432c-b41c-45b0c6a0d355",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events?category={{event_category}}&city={{event_city}}&price_to={{event_price}}&user={{primary_username}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "{{event_category}}"
+								},
+								{
+									"key": "city",
+									"value": "{{event_city}}"
+								},
+								{
+									"key": "price_to",
+									"value": "{{event_price}}"
+								},
+								{
+									"key": "user",
+									"value": "{{primary_username}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Events by Date Range",
+					"id": "52399890-d3dcc360-b47a-4465-bd4b-0b35dceae7dc",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events?date_from={{date_from}}&date_to={{date_to}}",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events"
+							],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "{{date_from}}"
+								},
+								{
+									"key": "date_to",
+									"value": "{{date_to}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Events Invalid Price",
+					"id": "52399890-e10f872f-2ecf-4b26-b55d-a9d8bcc92dd7",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events?price_to=abc",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events"
+							],
+							"query": [
+								{
+									"key": "price_to",
+									"value": "abc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Events Invalid Date",
+					"id": "52399890-6ae1989d-f41e-4f82-8257-08e9a7e09719",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/events?date_from=bad",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"events"
+							],
+							"query": [
+								{
+									"key": "date_from",
+									"value": "bad"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Primary User Events",
+					"id": "52399890-0af77f03-e4f2-4ebc-8b6e-cb165ad309eb",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users/{{primary_user_id}}/events",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users",
+								"{{primary_user_id}}",
+								"events"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Missing User Events",
+					"id": "52399890-41303940-0b9f-43ea-bd1a-cd65bb86d502",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "X-Session-Id={{primary_sid}}"
+							}
+						],
+						"url": {
+							"raw": "http://{{host}}:{{port}}/users/000000000000000000000000/events",
+							"protocol": "http",
+							"host": [
+								"{{host}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"users",
+								"000000000000000000000000",
+								"events"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"id": "52399890-11bea67d-185d-478e-992f-d33888e1e18d"
+		}
+	],
+	"variable": [
+		{
+			"key": "host",
+			"value": "localhost"
+		},
+		{
+			"key": "port",
+			"value": "8080"
+		},
+		{
+			"key": "session_sid",
+			"value": ""
+		},
+		{
+			"key": "expired_session_sid",
+			"value": ""
+		},
+		{
+			"key": "primary_full_name",
+			"value": "Elina Dusaeva"
+		},
+		{
+			"key": "primary_name_query",
+			"value": "Elina"
+		},
+		{
+			"key": "primary_username",
+			"value": "elina_dusaeva"
+		},
+		{
+			"key": "primary_password",
+			"value": "strong-pass"
+		},
+		{
+			"key": "primary_sid",
+			"value": ""
+		},
+		{
+			"key": "primary_user_id",
+			"value": ""
+		},
+		{
+			"key": "secondary_full_name",
+			"value": "Elina Dusaeva ITMO"
+		},
+		{
+			"key": "secondary_name_query",
+			"value": "ITMO"
+		},
+		{
+			"key": "secondary_username",
+			"value": "itmo_elina"
+		},
+		{
+			"key": "secondary_password",
+			"value": "strong-pass"
+		},
+		{
+			"key": "secondary_sid",
+			"value": ""
+		},
+		{
+			"key": "secondary_user_id",
+			"value": ""
+		},
+		{
+			"key": "primary_event_id",
+			"value": ""
+		},
+		{
+			"key": "primary_event_title",
+			"value": "ITMO meetup by Elina"
+		},
+		{
+			"key": "event_address",
+			"value": "ITMO, Kronverkskiy 49"
+		},
+		{
+			"key": "event_description",
+			"value": "Elina Dusaeva meetup for NoSQL ITMO lab checks"
+		},
+		{
+			"key": "started_at",
+			"value": "2026-05-01T18:00:00+03:00"
+		},
+		{
+			"key": "finished_at",
+			"value": "2026-05-01T20:00:00+03:00"
+		},
+		{
+			"key": "event_category",
+			"value": "meetup"
+		},
+		{
+			"key": "event_price",
+			"value": "0"
+		},
+		{
+			"key": "event_city",
+			"value": "Санкт-Петербург"
+		},
+		{
+			"key": "date_from",
+			"value": "20260501"
+		},
+		{
+			"key": "date_to",
+			"value": "20260531"
+		}
+	]
+}
