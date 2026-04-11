@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595",
     "name": "NoSQL_ITMO Labs",
-    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки и негативные сценарии. Элина",
+    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки и негативные сценарии.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -144,7 +144,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{session_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -190,7 +190,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{session_sid}}"
+                "value": "X-Session-Id={{secondary_sid}}"
               }
             ],
             "url": {
@@ -471,7 +471,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -652,6 +652,55 @@
           ]
         },
         {
+          "name": "Create User Invalid Full Name",
+          "id": "52399890-2b0c6910-fb7f-43dc-98a0-6a6f83b9f401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{session_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"\",\n  \"username\": \"invalid_user_{{run_id}}\",\n  \"password\": \"strong-pass\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid full_name field message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"full_name\" field' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Get Users by Name",
           "id": "52399890-de74ca72-523a-4d0c-a5bd-194baea188cc",
           "request": {
@@ -659,7 +708,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -708,7 +757,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -757,7 +806,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -790,6 +839,111 @@
                   "});",
                   "pm.test('Invalid id parameter message is returned', function () {",
                   "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"id\" parameter' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Users with Pagination",
+          "id": "52399890-3d9a5af0-bf39-49e8-a0f7-b213eac7d402",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users?name=Elina&limit=1&offset=0",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Elina"
+                },
+                {
+                  "key": "limit",
+                  "value": "1"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Paginated users response shape is valid', function () {",
+                  "  pm.expect(Array.isArray(body.users)).to.eql(true);",
+                  "  pm.expect(body.count).to.eql(body.users.length);",
+                  "  pm.expect(body.users.length).to.be.at.most(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Users Invalid Limit",
+          "id": "52399890-f8d24795-638d-406a-9356-4de4a7b88713",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users?limit=bad",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "bad"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid limit parameter message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"limit\" parameter' });",
                   "});"
                 ]
               }
@@ -1124,6 +1278,221 @@
       "name": "Lab 4",
       "item": [
         {
+          "name": "Create Event Owner User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const setCookie = pm.response.headers.get('Set-Cookie');",
+                  "const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+                  "pm.test('Owner sid is returned', function () {",
+                  "  pm.expect(match).to.not.eql(null);",
+                  "});",
+                  "if (match) {",
+                  "  pm.collectionVariables.set('owner_sid', match[1]);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "id": "52399890-fdcebe11-41ba-4992-85a4-7d8a8d202410",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"{{owner_full_name}}\",\n  \"username\": \"{{owner_username}}\",\n  \"password\": \"{{owner_password}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Find Event Owner User by Name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Owner user is found', function () {",
+                  "  pm.expect(Array.isArray(body.users)).to.eql(true);",
+                  "  pm.expect(body.count).to.be.above(0);",
+                  "});",
+                  "if (body.users && body.users.length > 0) {",
+                  "  pm.collectionVariables.set('owner_user_id', body.users[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "id": "52399890-f541a4ce-0b53-449d-961d-11d4ac117411",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users?name={{owner_name_query}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "{{owner_name_query}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Outsider User",
+          "description": "делаю отдельного юзера для проверки чужого доступа",
+          "id": "52399890-cce35e2c-136a-43b5-b09a-ab0f26852312",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"{{outsider_full_name}}\",\n  \"username\": \"{{outsider_username}}\",\n  \"password\": \"{{outsider_password}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const setCookie = pm.response.headers.get('Set-Cookie');",
+                  "const match = setCookie && setCookie.match(/^X-Session-Id=([0-9a-f]{32});/);",
+                  "pm.test('Outsider sid is returned', function () {",
+                  "  pm.expect(match).to.not.eql(null);",
+                  "});",
+                  "if (match) {",
+                  "  pm.collectionVariables.set('outsider_sid', match[1]);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Find Outsider User by Name",
+          "description": "вытаскиваю id чтобы проверить пустой список и чужой доступ",
+          "id": "52399890-4e4eca61-e4b3-40f0-970b-c17e222ad313",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{outsider_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users?name={{outsider_name_query}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "{{outsider_name_query}}"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Outsider user is found', function () {",
+                  "  pm.expect(Array.isArray(body.users)).to.eql(true);",
+                  "  pm.expect(body.count).to.be.above(0);",
+                  "});",
+                  "if (body.users && body.users.length > 0) {",
+                  "  pm.collectionVariables.set('outsider_user_id', body.users[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Create Primary Event",
           "event": [
             {
@@ -1131,8 +1500,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (!pm.collectionVariables.get('primary_sid')) {",
-                  "  throw new Error('primary_sid is empty. Run Create Session -> Create Primary User or Login Primary User before Lab 4 requests.');",
+                  "if (!pm.collectionVariables.get('owner_sid')) {",
+                  "  throw new Error('owner_sid is empty. Run Create Event Owner User first.');",
                   "}"
                 ]
               }
@@ -1167,7 +1536,7 @@
               },
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "body": {
@@ -1189,6 +1558,149 @@
           "response": []
         },
         {
+          "name": "Create Event Without Auth",
+          "id": "52399890-6bc3c3a8-4e38-42f5-a071-b1b59fd0d403",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unauthorized Event {{run_id}}\",\n  \"address\": \"ITMO, Kronverkskiy 49\",\n  \"description\": \"Unauthorized create attempt\",\n  \"started_at\": \"{{started_at}}\",\n  \"finished_at\": \"{{finished_at}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Event Invalid Finished At",
+          "id": "52399890-06b980f1-3b11-4d22-8d16-f306be5cf404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Broken Event {{run_id}}\",\n  \"address\": \"ITMO, Kronverkskiy 49\",\n  \"description\": \"Broken event validation\",\n  \"started_at\": \"{{started_at}}\",\n  \"finished_at\": \"{{started_at}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid finished_at field message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"finished_at\" field' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate Event",
+          "id": "52399890-1dc36b2f-a3fd-4759-86aa-8d113b6e3405",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{primary_event_title}}\",\n  \"address\": \"{{event_address}}\",\n  \"description\": \"{{event_description}}\",\n  \"started_at\": \"{{started_at}}\",\n  \"finished_at\": \"{{finished_at}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Duplicate event message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'event already exists' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Patch Primary Event",
           "id": "52399890-4e95727f-930b-410f-9033-9e16ba4489fd",
           "request": {
@@ -1200,7 +1712,7 @@
               },
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "body": {
@@ -1247,7 +1759,7 @@
               },
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "body": {
@@ -1294,7 +1806,7 @@
               },
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "body": {
@@ -1335,6 +1847,9 @@
         {
           "name": "Patch Event Without Auth",
           "id": "52399890-5c64d2b3-f3e4-45ba-ae4c-398799045119",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
           "request": {
             "method": "PATCH",
             "header": [
@@ -1377,7 +1892,11 @@
         },
         {
           "name": "Patch Event as Other User",
+          "description": "смотрю что чужой не пролезет",
           "id": "52399890-97b0c317-6b4b-4309-a446-864997d1237e",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
           "request": {
             "method": "PATCH",
             "header": [
@@ -1387,7 +1906,7 @@
               },
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{secondary_sid}}"
+                "value": "X-Session-Id={{outsider_sid}}"
               }
             ],
             "body": {
@@ -1433,7 +1952,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1460,9 +1979,11 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "const body = pm.response.json();",
+                  "const resolvedTitle = pm.variables.replaceIn('{{primary_event_title}}');",
                   "pm.test('Event card contains selected event', function () {",
                   "  pm.expect(body.id).to.eql(pm.collectionVariables.get('primary_event_id'));",
-                  "  pm.expect(body.title).to.eql(pm.collectionVariables.get('primary_event_title'));",
+                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('primary_event_id'));",
+                  "  pm.expect(body.title).to.eql(resolvedTitle);",
                   "});"
                 ]
               }
@@ -1477,7 +1998,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1519,7 +2040,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1561,6 +2082,55 @@
           ]
         },
         {
+          "name": "Search Events by Id",
+          "id": "52399890-f2fe6a73-a4cc-4a55-aee3-0fd53b25f406",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?id={{primary_event_id}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{primary_event_id}}"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Exact event is returned by id filter', function () {",
+                  "  pm.expect(body.count).to.eql(1);",
+                  "  pm.expect(body.events[0].id).to.eql(pm.collectionVariables.get('primary_event_id'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Search Events by Lab 4 Filters",
           "id": "52399890-55065c88-4682-432c-b41c-45b0c6a0d355",
           "request": {
@@ -1568,11 +2138,11 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
-              "raw": "http://{{host}}:{{port}}/events?category={{event_category}}&city={{event_city}}&price_to={{event_price}}&user={{primary_username}}",
+              "raw": "http://{{host}}:{{port}}/events?category={{event_category}}&city={{event_city}}&price_to={{event_price}}&user={{owner_username}}",
               "protocol": "http",
               "host": [
                 "{{host}}"
@@ -1596,7 +2166,7 @@
                 },
                 {
                   "key": "user",
-                  "value": "{{primary_username}}"
+                  "value": "{{owner_username}}"
                 }
               ]
             }
@@ -1622,6 +2192,59 @@
           ]
         },
         {
+          "name": "Search Events by Price Range",
+          "id": "52399890-bcc4f827-d2c1-45fd-9dc8-18ff0ae0a407",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?price_from={{event_price}}&price_to={{event_price}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "price_from",
+                  "value": "{{event_price}}"
+                },
+                {
+                  "key": "price_to",
+                  "value": "{{event_price}}"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Price range response shape is valid', function () {",
+                  "  pm.expect(Array.isArray(body.events)).to.eql(true);",
+                  "  pm.expect(body.count).to.eql(body.events.length);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Search Events by Date Range",
           "id": "52399890-d3dcc360-b47a-4465-bd4b-0b35dceae7dc",
           "request": {
@@ -1629,7 +2252,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1675,6 +2298,154 @@
           ]
         },
         {
+          "name": "Search Events with Pagination",
+          "id": "52399890-a3147c8f-d1b0-4a97-b7ea-f1fd3dab7408",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?limit=1&offset=0",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Paginated events response shape is valid', function () {",
+                  "  pm.expect(Array.isArray(body.events)).to.eql(true);",
+                  "  pm.expect(body.count).to.eql(body.events.length);",
+                  "  pm.expect(body.events.length).to.be.at.most(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Events Invalid Category",
+          "id": "52399890-a4d77234-5591-4763-a458-836ba079ff14",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?category=invalid-category",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "invalid-category"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid category parameter message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"category\" parameter' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Events Invalid Limit",
+          "id": "52399890-a17eebc9-1a60-4762-a8fa-b4225fa17915",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?limit=bad",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "bad"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid limit parameter message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"limit\" parameter' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Search Events Invalid Price",
           "id": "52399890-e10f872f-2ecf-4b26-b55d-a9d8bcc92dd7",
           "request": {
@@ -1682,7 +2453,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1722,6 +2493,53 @@
           ]
         },
         {
+          "name": "Search Events Invalid Id",
+          "id": "52399890-3a09d73d-bb5d-4818-ab87-1d89fe791409",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?id=bad",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "bad"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid id parameter message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"id\" parameter' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Search Events Invalid Date",
           "id": "52399890-6ae1989d-f41e-4f82-8257-08e9a7e09719",
           "request": {
@@ -1729,7 +2547,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1769,6 +2587,104 @@
           ]
         },
         {
+          "name": "Search Events Invalid Date To",
+          "id": "52399890-9aefaf04-41d5-4419-b0a2-17d4633efe10",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?date_to=bad",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "date_to",
+                  "value": "bad"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid date_to parameter message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"date_to\" parameter' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Events Invalid Price Range",
+          "id": "52399890-fbc98678-7074-441b-bd5d-ae8265848b11",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?price_from=10&price_to=0",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "price_from",
+                  "value": "10"
+                },
+                {
+                  "key": "price_to",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Invalid price_to parameter message is returned for reversed range', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'invalid \"price_to\" parameter' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Get Primary User Events",
           "id": "52399890-0af77f03-e4f2-4ebc-8b6e-cb165ad309eb",
           "request": {
@@ -1776,11 +2692,11 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
-              "raw": "http://{{host}}:{{port}}/users/{{primary_user_id}}/events",
+              "raw": "http://{{host}}:{{port}}/users/{{owner_user_id}}/events",
               "protocol": "http",
               "host": [
                 "{{host}}"
@@ -1788,7 +2704,7 @@
               "port": "{{port}}",
               "path": [
                 "users",
-                "{{primary_user_id}}",
+                "{{owner_user_id}}",
                 "events"
               ]
             }
@@ -1814,6 +2730,52 @@
           ]
         },
         {
+          "name": "Get Outsider User Events Empty",
+          "id": "52399890-e981df26-5c0f-4d89-b198-954baf49e412",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{outsider_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users/{{outsider_user_id}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users",
+                "{{outsider_user_id}}",
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Empty events list is returned for user without events', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ events: [], count: 0 });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Get Missing User Events",
           "id": "52399890-41303940-0b9f-43ea-bd1a-cd65bb86d502",
           "request": {
@@ -1821,7 +2783,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "X-Session-Id={{primary_sid}}"
+                "value": "X-Session-Id={{owner_sid}}"
               }
             ],
             "url": {
@@ -1878,12 +2840,36 @@
       "value": ""
     },
     {
+      "key": "owner_full_name",
+      "value": "elina owner {{run_id}}"
+    },
+    {
+      "key": "owner_name_query",
+      "value": "elina owner {{run_id}}"
+    },
+    {
+      "key": "owner_username",
+      "value": "owner_elina_{{run_id}}"
+    },
+    {
+      "key": "owner_password",
+      "value": "strong-pass"
+    },
+    {
+      "key": "owner_sid",
+      "value": ""
+    },
+    {
+      "key": "owner_user_id",
+      "value": ""
+    },
+    {
       "key": "primary_full_name",
-      "value": "Elina Dusaeva {{run_id}}"
+      "value": "elina dusaeva {{run_id}}"
     },
     {
       "key": "primary_name_query",
-      "value": "Elina Dusaeva {{run_id}}"
+      "value": "elina dusaeva {{run_id}}"
     },
     {
       "key": "primary_username",
@@ -1903,11 +2889,11 @@
     },
     {
       "key": "secondary_full_name",
-      "value": "Elina Dusaeva ITMO {{run_id}}"
+      "value": "elina dusaeva itmo {{run_id}}"
     },
     {
       "key": "secondary_name_query",
-      "value": "Elina Dusaeva ITMO {{run_id}}"
+      "value": "elina dusaeva itmo {{run_id}}"
     },
     {
       "key": "secondary_username",
@@ -1926,12 +2912,36 @@
       "value": ""
     },
     {
+      "key": "outsider_full_name",
+      "value": "elina outsider {{run_id}}"
+    },
+    {
+      "key": "outsider_name_query",
+      "value": "elina outsider {{run_id}}"
+    },
+    {
+      "key": "outsider_username",
+      "value": "outsider_elina_{{run_id}}"
+    },
+    {
+      "key": "outsider_password",
+      "value": "strong-pass"
+    },
+    {
+      "key": "outsider_sid",
+      "value": ""
+    },
+    {
+      "key": "outsider_user_id",
+      "value": ""
+    },
+    {
       "key": "primary_event_id",
       "value": ""
     },
     {
       "key": "primary_event_title",
-      "value": "ITMO meetup by Elina {{run_id}}"
+      "value": "itmo meetup by elina {{run_id}}"
     },
     {
       "key": "event_address",
@@ -1939,7 +2949,7 @@
     },
     {
       "key": "event_description",
-      "value": "Elina Dusaeva meetup for NoSQL ITMO lab checks {{run_id}}"
+      "value": "elina dusaeva meetup for nosql itmo lab checks {{run_id}}"
     },
     {
       "key": "started_at",
@@ -1959,7 +2969,7 @@
     },
     {
       "key": "event_city",
-      "value": "Санкт-Петербург"
+      "value": "санкт-петербург"
     },
     {
       "key": "date_from",
@@ -1984,7 +2994,10 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "if (!pm.collectionVariables.get('run_id')) {",
+          "const starters = ['Health without Cookie', 'Create Primary User', 'Create Event Owner User'];",
+          "if (starters.includes(pm.info.requestName)) {",
+          "  pm.collectionVariables.set('run_id', String(Date.now()).slice(-8));",
+          "} else if (!pm.collectionVariables.get('run_id')) {",
           "  pm.collectionVariables.set('run_id', String(Date.now()).slice(-8));",
           "}"
         ]
