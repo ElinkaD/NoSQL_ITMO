@@ -167,13 +167,12 @@ def invalid_field_response(
     is_parameter: bool = False,
     refresh: bool = True,
 ) -> JSONResponse:
+    entity = "parameter" if is_parameter else "field"
     response = JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content={"message": f'invalid "{field_name}" field'},
+        content={"error": f'invalid "{field_name}" {entity}'},
     )
-    if sid is not None:
-        if refresh:
-            refresh_session_state(sid)
+    if sid is not None and refresh:
         set_session_cookie(response, sid)
     return response
 

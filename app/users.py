@@ -11,7 +11,9 @@ from app.common import (
     parse_non_empty_string_parameter,
     parse_object_id,
     parse_uint_parameter,
+    parse_yyyymmdd,
 )
+from app.events import build_event_filter, matches_started_date_range
 from app.db import StorageUnavailableError, events_collection, users_collection
 from app.sessions import (
     clear_session_cookie,
@@ -200,6 +202,7 @@ def get_user(request: Request, user_id: str) -> JSONResponse:
 @router.get("/users/{user_id}/events")
 def list_user_events(request: Request, user_id: str) -> JSONResponse:
     sid = get_active_sid(request, suppress_errors=True)
+
     parsed_user_id = parse_object_id(user_id)
     if parsed_user_id is None:
         return user_events_not_found_response(sid)
@@ -212,12 +215,51 @@ def list_user_events(request: Request, user_id: str) -> JSONResponse:
     if user_document is None:
         return user_events_not_found_response(sid)
 
+    raw_limit = request.query_params.get("limit")
+    raw_offset = request.query_params.get("offset")
+
+    limit = parse_uint_parameter(raw_limit)
+    if raw_limit is not None and limit is None:
+        return invalid_field_response("limit", sid, is_parameter=True, refresh=False)
+
+    offset = parse_uint_parameter(raw_offset)
+    if raw_offset is not None and offset is None:
+        return invalid_field_response("offset", sid, is_parameter=True, refresh=False)
+
+    started_date_from = parse_yyyymmdd(request.query_params.get("date_from"))
+    if request.query_params.get("date_from") is not None and started_date_from is None:
+        return invalid_field_response("date_from", sid, is_parameter=True, refresh=False)
+
+    started_date_to = parse_yyyymmdd(request.query_params.get("date_to"))
+    if request.query_params.get("date_to") is not None and started_date_to is None:
+        return invalid_field_response("date_to", sid, is_parameter=True, refresh=False)
+
+    if started_date_from is not None and started_date_to is not None and started_date_from > started_date_to:
+        return invalid_field_response("date_to", sid, is_parameter=True, refresh=False)
+
+    mongo_filter, error_response = build_event_filter(request, sid)
+    if error_response is not None:
+        return error_response
+
+    # для этого эндпоинта организатор задаётся path-параметром
+    mongo_filter["created_by"] = str(parsed_user_id)
+
     try:
-        documents = list(
-            events_collection.find({"created_by": str(parsed_user_id)}).sort("created_at", DESCENDING)
-        )
+        documents = list(events_collection.find(mongo_filter).sort("created_at", DESCENDING))
     except PyMongoError as exc:
         raise StorageUnavailableError("mongodb") from exc
+
+    if started_date_from is not None or started_date_to is not None:
+        documents = [
+            document
+            for document in documents
+            if matches_started_date_range(document, started_date_from, started_date_to)
+        ]
+
+    if offset is not None:
+        documents = documents[offset:]
+    if limit is not None:
+        documents = documents[:limit]
 
     response = JSONResponse(
         content={"events": [serialize_event(document) for document in documents], "count": len(documents)}
