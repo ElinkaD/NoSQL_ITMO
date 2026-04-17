@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from typing import Callable, TypeVar
 
 from bson import ObjectId
 
@@ -8,6 +9,7 @@ RFC3339_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
 ALLOWED_EVENT_CATEGORIES = {"meetup", "concert", "exhibition", "party", "other"}
+T = TypeVar("T")
 
 
 def is_non_empty_string(value: object) -> bool:
@@ -62,3 +64,8 @@ def parse_non_empty_string_parameter(value: str | None) -> str | None:
     if not is_non_empty_string(value):
         return None
     return value
+
+
+def parse_optional_parameter(value: str | None, parser: Callable[[str | None], T | None]) -> tuple[T | None, bool]:
+    parsed_value = parser(value)
+    return parsed_value, value is not None and parsed_value is None

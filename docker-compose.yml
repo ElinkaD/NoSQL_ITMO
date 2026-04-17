@@ -69,13 +69,13 @@ services:
       - configReplSet
       - --bind_ip_all
       - --port
-      - "27019"
+      - "${MONGODB_CONFIGSVR01_PORT:-27019}"
     ports:
-      - "27019:27019"
+      - "${MONGODB_CONFIGSVR01_PORT:-27019}:${MONGODB_CONFIGSVR01_PORT:-27019}"
     volumes:
       - configsvr01_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27019 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_CONFIGSVR01_PORT:-27019} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -89,13 +89,13 @@ services:
       - configReplSet
       - --bind_ip_all
       - --port
-      - "27020"
+      - "${MONGODB_CONFIGSVR02_PORT:-27020}"
     ports:
-      - "27020:27020"
+      - "${MONGODB_CONFIGSVR02_PORT:-27020}:${MONGODB_CONFIGSVR02_PORT:-27020}"
     volumes:
       - configsvr02_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27020 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_CONFIGSVR02_PORT:-27020} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -109,13 +109,13 @@ services:
       - configReplSet
       - --bind_ip_all
       - --port
-      - "27021"
+      - "${MONGODB_CONFIGSVR03_PORT:-27021}"
     ports:
-      - "27021:27021"
+      - "${MONGODB_CONFIGSVR03_PORT:-27021}:${MONGODB_CONFIGSVR03_PORT:-27021}"
     volumes:
       - configsvr03_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27021 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_CONFIGSVR03_PORT:-27021} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -129,13 +129,13 @@ services:
       - shard1ReplSet
       - --bind_ip_all
       - --port
-      - "27118"
+      - "${MONGODB_SHARD1_01_PORT:-27118}"
     ports:
-      - "27118:27118"
+      - "${MONGODB_SHARD1_01_PORT:-27118}:${MONGODB_SHARD1_01_PORT:-27118}"
     volumes:
       - shard1_01_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27118 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_SHARD1_01_PORT:-27118} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -149,13 +149,13 @@ services:
       - shard1ReplSet
       - --bind_ip_all
       - --port
-      - "27119"
+      - "${MONGODB_SHARD1_02_PORT:-27119}"
     ports:
-      - "27119:27119"
+      - "${MONGODB_SHARD1_02_PORT:-27119}:${MONGODB_SHARD1_02_PORT:-27119}"
     volumes:
       - shard1_02_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27119 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_SHARD1_02_PORT:-27119} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -169,13 +169,13 @@ services:
       - shard1ReplSet
       - --bind_ip_all
       - --port
-      - "27120"
+      - "${MONGODB_SHARD1_03_PORT:-27120}"
     ports:
-      - "27120:27120"
+      - "${MONGODB_SHARD1_03_PORT:-27120}:${MONGODB_SHARD1_03_PORT:-27120}"
     volumes:
       - shard1_03_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27120 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_SHARD1_03_PORT:-27120} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -189,13 +189,13 @@ services:
       - shard2ReplSet
       - --bind_ip_all
       - --port
-      - "27218"
+      - "${MONGODB_SHARD2_01_PORT:-27218}"
     ports:
-      - "27218:27218"
+      - "${MONGODB_SHARD2_01_PORT:-27218}:${MONGODB_SHARD2_01_PORT:-27218}"
     volumes:
       - shard2_01_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27218 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_SHARD2_01_PORT:-27218} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -209,13 +209,13 @@ services:
       - shard2ReplSet
       - --bind_ip_all
       - --port
-      - "27219"
+      - "${MONGODB_SHARD2_02_PORT:-27219}"
     ports:
-      - "27219:27219"
+      - "${MONGODB_SHARD2_02_PORT:-27219}:${MONGODB_SHARD2_02_PORT:-27219}"
     volumes:
       - shard2_02_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27219 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_SHARD2_02_PORT:-27219} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -229,13 +229,13 @@ services:
       - shard2ReplSet
       - --bind_ip_all
       - --port
-      - "27220"
+      - "${MONGODB_SHARD2_03_PORT:-27220}"
     ports:
-      - "27220:27220"
+      - "${MONGODB_SHARD2_03_PORT:-27220}:${MONGODB_SHARD2_03_PORT:-27220}"
     volumes:
       - shard2_03_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27220 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_SHARD2_03_PORT:-27220} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -245,10 +245,10 @@ services:
     command:
       - mongos
       - --configdb
-      - configReplSet/configsvr01:27019,configsvr02:27020,configsvr03:27021
+      - configReplSet/configsvr01:${MONGODB_CONFIGSVR01_PORT:-27019},configsvr02:${MONGODB_CONFIGSVR02_PORT:-27020},configsvr03:${MONGODB_CONFIGSVR03_PORT:-27021}
       - --bind_ip_all
       - --port
-      - "27017"
+      - "${MONGODB_PORT}"
     ports:
       - "${MONGODB_PORT}:${MONGODB_PORT}"
     restart: unless-stopped
@@ -260,7 +260,7 @@ services:
       configsvr03:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --port 27017 --eval 'db.adminCommand({ ping: 1 }).ok'"]
+      test: ["CMD-SHELL", "mongosh --quiet --port ${MONGODB_PORT} --eval 'db.adminCommand({ ping: 1 }).ok'"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -292,6 +292,16 @@ services:
       MONGODB_DATABASE: ${MONGODB_DATABASE}
       MONGODB_APP_USER: ${MONGODB_APP_USER}
       MONGODB_APP_PASSWORD: ${MONGODB_APP_PASSWORD}
+      MONGODB_PORT: ${MONGODB_PORT}
+      MONGODB_CONFIGSVR01_PORT: ${MONGODB_CONFIGSVR01_PORT:-27019}
+      MONGODB_CONFIGSVR02_PORT: ${MONGODB_CONFIGSVR02_PORT:-27020}
+      MONGODB_CONFIGSVR03_PORT: ${MONGODB_CONFIGSVR03_PORT:-27021}
+      MONGODB_SHARD1_01_PORT: ${MONGODB_SHARD1_01_PORT:-27118}
+      MONGODB_SHARD1_02_PORT: ${MONGODB_SHARD1_02_PORT:-27119}
+      MONGODB_SHARD1_03_PORT: ${MONGODB_SHARD1_03_PORT:-27120}
+      MONGODB_SHARD2_01_PORT: ${MONGODB_SHARD2_01_PORT:-27218}
+      MONGODB_SHARD2_02_PORT: ${MONGODB_SHARD2_02_PORT:-27219}
+      MONGODB_SHARD2_03_PORT: ${MONGODB_SHARD2_03_PORT:-27220}
     volumes:
       - ./mongodb/init-cluster.sh:/scripts/init-cluster.sh:ro
     command:

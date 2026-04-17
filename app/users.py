@@ -10,11 +10,12 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from app.common import (
     is_non_empty_string,
     is_valid_event_category,
+    parse_optional_parameter,
     parse_non_empty_string_parameter,
     parse_object_id,
     parse_rfc3339,
-    parse_uint_parameter,
     parse_yyyymmdd,
+    parse_uint_parameter,
 )
 from app.db import StorageUnavailableError, events_collection, users_collection
 from app.sessions import (
@@ -154,15 +155,12 @@ async def create_user(request: Request) -> Response:
 @router.get("/users")
 def list_users(request: Request) -> JSONResponse:
     sid = get_active_sid(request, suppress_errors=True)
-    raw_limit = request.query_params.get("limit")
-    raw_offset = request.query_params.get("offset")
-
-    limit = parse_uint_parameter(raw_limit)
-    if raw_limit is not None and limit is None:
+    limit, invalid_limit = parse_optional_parameter(request.query_params.get("limit"), parse_uint_parameter)
+    if invalid_limit:
         return invalid_field_response("limit", sid, is_parameter=True, refresh=False)
 
-    offset = parse_uint_parameter(raw_offset)
-    if raw_offset is not None and offset is None:
+    offset, invalid_offset = parse_optional_parameter(request.query_params.get("offset"), parse_uint_parameter)
+    if invalid_offset:
         return invalid_field_response("offset", sid, is_parameter=True, refresh=False)
 
     user_id = request.query_params.get("id")
@@ -225,23 +223,24 @@ def get_user(request: Request, user_id: str) -> JSONResponse:
 @router.get("/users/{user_id}/events")
 def list_user_events(request: Request, user_id: str) -> JSONResponse:
     sid = get_active_sid(request, suppress_errors=True)
-    raw_limit = request.query_params.get("limit")
-    raw_offset = request.query_params.get("offset")
-
-    limit = parse_uint_parameter(raw_limit)
-    if raw_limit is not None and limit is None:
+    limit, invalid_limit = parse_optional_parameter(request.query_params.get("limit"), parse_uint_parameter)
+    if invalid_limit:
         return invalid_field_response("limit", sid, is_parameter=True, refresh=False)
 
-    offset = parse_uint_parameter(raw_offset)
-    if raw_offset is not None and offset is None:
+    offset, invalid_offset = parse_optional_parameter(request.query_params.get("offset"), parse_uint_parameter)
+    if invalid_offset:
         return invalid_field_response("offset", sid, is_parameter=True, refresh=False)
 
-    started_date_from = parse_yyyymmdd(request.query_params.get("date_from"))
-    if request.query_params.get("date_from") is not None and started_date_from is None:
+    started_date_from, invalid_date_from = parse_optional_parameter(
+        request.query_params.get("date_from"), parse_yyyymmdd
+    )
+    if invalid_date_from:
         return invalid_field_response("date_from", sid, is_parameter=True, refresh=False)
 
-    started_date_to = parse_yyyymmdd(request.query_params.get("date_to"))
-    if request.query_params.get("date_to") is not None and started_date_to is None:
+    started_date_to, invalid_date_to = parse_optional_parameter(
+        request.query_params.get("date_to"), parse_yyyymmdd
+    )
+    if invalid_date_to:
         return invalid_field_response("date_to", sid, is_parameter=True, refresh=False)
 
     if started_date_from is not None and started_date_to is not None and started_date_from > started_date_to:
@@ -278,12 +277,16 @@ def list_user_events(request: Request, user_id: str) -> JSONResponse:
             return invalid_field_response("category", sid, is_parameter=True, refresh=False)
         mongo_filter["category"] = category
 
-    price_from = parse_uint_parameter(request.query_params.get("price_from"))
-    if request.query_params.get("price_from") is not None and price_from is None:
+    price_from, invalid_price_from = parse_optional_parameter(
+        request.query_params.get("price_from"), parse_uint_parameter
+    )
+    if invalid_price_from:
         return invalid_field_response("price_from", sid, is_parameter=True, refresh=False)
 
-    price_to = parse_uint_parameter(request.query_params.get("price_to"))
-    if request.query_params.get("price_to") is not None and price_to is None:
+    price_to, invalid_price_to = parse_optional_parameter(
+        request.query_params.get("price_to"), parse_uint_parameter
+    )
+    if invalid_price_to:
         return invalid_field_response("price_to", sid, is_parameter=True, refresh=False)
 
     if price_from is not None or price_to is not None:

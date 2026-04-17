@@ -1,6 +1,17 @@
 #!/bin/sh
 set -eu
 
+CONFIGSVR01_PORT="${MONGODB_CONFIGSVR01_PORT}"
+CONFIGSVR02_PORT="${MONGODB_CONFIGSVR02_PORT}"
+CONFIGSVR03_PORT="${MONGODB_CONFIGSVR03_PORT}"
+SHARD1_01_PORT="${MONGODB_SHARD1_01_PORT}"
+SHARD1_02_PORT="${MONGODB_SHARD1_02_PORT}"
+SHARD1_03_PORT="${MONGODB_SHARD1_03_PORT}"
+SHARD2_01_PORT="${MONGODB_SHARD2_01_PORT}"
+SHARD2_02_PORT="${MONGODB_SHARD2_02_PORT}"
+SHARD2_03_PORT="${MONGODB_SHARD2_03_PORT}"
+MONGOS_PORT="${MONGODB_PORT}"
+
 wait_for_mongo() {
   host="$1"
   port="$2"
@@ -43,41 +54,41 @@ wait_for_primary() {
   done
 }
 
-wait_for_mongo configsvr01 27019
-wait_for_mongo configsvr02 27020
-wait_for_mongo configsvr03 27021
-wait_for_mongo shard1-01 27118
-wait_for_mongo shard1-02 27119
-wait_for_mongo shard1-03 27120
-wait_for_mongo shard2-01 27218
-wait_for_mongo shard2-02 27219
-wait_for_mongo shard2-03 27220
+wait_for_mongo configsvr01 "$CONFIGSVR01_PORT"
+wait_for_mongo configsvr02 "$CONFIGSVR02_PORT"
+wait_for_mongo configsvr03 "$CONFIGSVR03_PORT"
+wait_for_mongo shard1-01 "$SHARD1_01_PORT"
+wait_for_mongo shard1-02 "$SHARD1_02_PORT"
+wait_for_mongo shard1-03 "$SHARD1_03_PORT"
+wait_for_mongo shard2-01 "$SHARD2_01_PORT"
+wait_for_mongo shard2-02 "$SHARD2_02_PORT"
+wait_for_mongo shard2-03 "$SHARD2_03_PORT"
 
 initiate_replica_set \
   configsvr01 \
-  27019 \
+  "$CONFIGSVR01_PORT" \
   configReplSet \
-  "{ _id: 0, host: 'configsvr01:27019' }, { _id: 1, host: 'configsvr02:27020' }, { _id: 2, host: 'configsvr03:27021' }"
+  "{ _id: 0, host: 'configsvr01:${CONFIGSVR01_PORT}' }, { _id: 1, host: 'configsvr02:${CONFIGSVR02_PORT}' }, { _id: 2, host: 'configsvr03:${CONFIGSVR03_PORT}' }"
 
 initiate_replica_set \
   shard1-01 \
-  27118 \
+  "$SHARD1_01_PORT" \
   shard1ReplSet \
-  "{ _id: 0, host: 'shard1-01:27118' }, { _id: 1, host: 'shard1-02:27119' }, { _id: 2, host: 'shard1-03:27120' }"
+  "{ _id: 0, host: 'shard1-01:${SHARD1_01_PORT}' }, { _id: 1, host: 'shard1-02:${SHARD1_02_PORT}' }, { _id: 2, host: 'shard1-03:${SHARD1_03_PORT}' }"
 
 initiate_replica_set \
   shard2-01 \
-  27218 \
+  "$SHARD2_01_PORT" \
   shard2ReplSet \
-  "{ _id: 0, host: 'shard2-01:27218' }, { _id: 1, host: 'shard2-02:27219' }, { _id: 2, host: 'shard2-03:27220' }"
+  "{ _id: 0, host: 'shard2-01:${SHARD2_01_PORT}' }, { _id: 1, host: 'shard2-02:${SHARD2_02_PORT}' }, { _id: 2, host: 'shard2-03:${SHARD2_03_PORT}' }"
 
-wait_for_primary configsvr01 27019
-wait_for_primary shard1-01 27118
-wait_for_primary shard2-01 27218
+wait_for_primary configsvr01 "$CONFIGSVR01_PORT"
+wait_for_primary shard1-01 "$SHARD1_01_PORT"
+wait_for_primary shard2-01 "$SHARD2_01_PORT"
 
-wait_for_mongo mongos 27017
+wait_for_mongo mongos "$MONGOS_PORT"
 
-mongosh --quiet --host mongos --port 27017 <<EOF
+mongosh --quiet --host mongos --port "$MONGOS_PORT" <<EOF
 const databaseName = "${MONGODB_DATABASE}";
 const appUser = "${MONGODB_APP_USER}";
 const appPassword = "${MONGODB_APP_PASSWORD}";
@@ -88,10 +99,10 @@ const appDb = db.getSiblingDB(databaseName);
 
 const shardNames = adminDb.runCommand({ listShards: 1 }).shards.map((shard) => shard._id);
 if (!shardNames.includes("shard1ReplSet")) {
-  sh.addShard("shard1ReplSet/shard1-01:27118,shard1-02:27119,shard1-03:27120");
+  sh.addShard("shard1ReplSet/shard1-01:${SHARD1_01_PORT},shard1-02:${SHARD1_02_PORT},shard1-03:${SHARD1_03_PORT}");
 }
 if (!shardNames.includes("shard2ReplSet")) {
-  sh.addShard("shard2ReplSet/shard2-01:27218,shard2-02:27219,shard2-03:27220");
+  sh.addShard("shard2ReplSet/shard2-01:${SHARD2_01_PORT},shard2-02:${SHARD2_02_PORT},shard2-03:${SHARD2_03_PORT}");
 }
 
 const databaseEntry = configDb.databases.findOne({ _id: databaseName });
