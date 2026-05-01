@@ -7,6 +7,7 @@ services:
       APP_HOST: ${APP_HOST}
       APP_PORT: ${APP_PORT}
       APP_USER_SESSION_TTL: ${APP_USER_SESSION_TTL}
+      APP_LIKE_TTL: ${APP_LIKE_TTL}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -21,15 +22,38 @@ services:
       MONGODB_SERVER_SELECTION_TIMEOUT_MS: ${MONGODB_SERVER_SELECTION_TIMEOUT_MS}
       MONGODB_CONNECT_TIMEOUT_MS: ${MONGODB_CONNECT_TIMEOUT_MS}
       MONGODB_SOCKET_TIMEOUT_MS: ${MONGODB_SOCKET_TIMEOUT_MS}
+      CASSANDRA_HOSTS: ${CASSANDRA_HOSTS}
+      CASSANDRA_PORT: ${CASSANDRA_PORT}
+      CASSANDRA_USERNAME: ${CASSANDRA_USERNAME}
+      CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
+      CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE}
+      CASSANDRA_CONSISTENCY: ${CASSANDRA_CONSISTENCY}
     ports:
       - "${APP_PORT}:${APP_PORT}"
     depends_on:
       redis:
         condition: service_healthy
+      cassandra:
+        condition: service_healthy
       mongos:
         condition: service_healthy
       mongo-setup:
         condition: service_completed_successfully
+
+  cassandra:
+    image: cassandra:5.0
+    environment:
+      CASSANDRA_CLUSTER_NAME: eventhub
+      CASSANDRA_START_RPC: "true"
+    ports:
+      - "${CASSANDRA_PORT}:${CASSANDRA_PORT}"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh 127.0.0.1 ${CASSANDRA_PORT} -e 'SHOW VERSION'"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
 
   redis:
     image: redis:7-alpine
@@ -309,6 +333,7 @@ services:
       - /scripts/init-cluster.sh
 
 volumes:
+  cassandra_data:
   configsvr01_data:
   configsvr02_data:
   configsvr03_data:

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 from redis.exceptions import RedisError
 
-from app.db import StorageUnavailableError, ensure_indexes
+from app.db import StorageUnavailableError, ensure_cassandra_schema, ensure_indexes
 from app.events import router as events_router
 from app.sessions import router as sessions_router
 from app.users import router as users_router
@@ -18,6 +18,7 @@ app.include_router(events_router)
 @app.on_event("startup")
 def startup() -> None:
     ensure_indexes()
+    ensure_cassandra_schema()
 
 
 @app.exception_handler(StorageUnavailableError)

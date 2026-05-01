@@ -4,7 +4,7 @@ from datetime import date
 from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import JSONResponse
 from pymongo import DESCENDING
-from pymongo.errors import DuplicateKeyError, PyMongoError
+from pymongo.errors import PyMongoError
 
 from app.common import (
     is_non_empty_string,
@@ -16,6 +16,13 @@ from app.common import (
     parse_uint_parameter,
 )
 from app.db import StorageUnavailableError, events_collection, users_collection
+from app.reactions import (
+    empty_reactions,
+    get_reactions_by_titles,
+    invalidate_reactions_cache,
+    should_include_reactions,
+    upsert_event_reaction,
+)
 from app.sessions import (
     get_active_sid,
     get_current_user_id,
@@ -43,6 +50,20 @@ def event_patch_not_found_response(sid: str | None, user_id: str | None = None) 
     response = JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"message": "Not found. Be sure that event exists and you are the organizer"},
+    )
+    if sid is not None:
+        if user_id is not None:
+            refresh_session_state(sid, user_id)
+        else:
+            refresh_session_state(sid)
+        set_session_cookie(response, sid)
+    return response
+
+
+def event_reaction_not_found_response(sid: str | None, user_id: str | None = None) -> JSONResponse:
+    response = JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"message": "Event not found"},
     )
     if sid is not None:
         if user_id is not None:
@@ -214,19 +235,6 @@ async def create_event(request: Request) -> Response:
     if city is not None and not is_non_empty_string(city):
         return invalid_field_response("city", sid)
 
-    try:
-        duplicate_event = events_collection.find_one({"title": payload["title"]}, {"_id": 1})
-    except PyMongoError as exc:
-        raise StorageUnavailableError("mongodb") from exc
-    if duplicate_event is not None:
-        response = JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={"message": "event already exists"},
-        )
-        refresh_session_state(sid, user_id)
-        set_session_cookie(response, sid)
-        return response
-
     # формируем вставку о событие в mongodb
     document = {
         "title": payload["title"],
@@ -249,14 +257,6 @@ async def create_event(request: Request) -> Response:
 
     try:
         result = events_collection.insert_one(document)
-    except DuplicateKeyError:
-        response = JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={"message": "event already exists"},
-        )
-        refresh_session_state(sid, user_id)
-        set_session_cookie(response, sid)
-        return response
     except PyMongoError as exc:
         raise StorageUnavailableError("mongodb") from exc
 
@@ -317,8 +317,18 @@ def list_events(request: Request) -> JSONResponse:
     if limit is not None:
         documents = documents[:limit]
 
+    include_reactions = should_include_reactions(request.query_params.get("include"))
+    serialized_events = [serialize_event(document) for document in documents]
+    if include_reactions and serialized_events:
+        reactions_by_title = get_reactions_by_titles([event["title"] for event in serialized_events])
+        for event in serialized_events:
+            event["reactions"] = reactions_by_title.get(event["title"], empty_reactions())
+    elif include_reactions:
+        for event in serialized_events:
+            event["reactions"] = empty_reactions()
+
     response = JSONResponse(
-        content={"events": [serialize_event(document) for document in documents], "count": len(documents)}
+        content={"events": serialized_events, "count": len(documents)}
     )
     if sid is not None:
         set_session_cookie(response, sid)
@@ -340,7 +350,11 @@ def get_event(request: Request, event_id: str) -> JSONResponse:
     if document is None:
         return event_not_found_response(sid)
 
-    response = JSONResponse(content=serialize_event(document))
+    event = serialize_event(document)
+    if should_include_reactions(request.query_params.get("include")):
+        event["reactions"] = get_reactions_by_titles([event["title"]]).get(event["title"], empty_reactions())
+
+    response = JSONResponse(content=event)
     if sid is not None:
         set_session_cookie(response, sid)
     return response
@@ -414,6 +428,70 @@ async def patch_event(request: Request, event_id: str) -> Response:
                 return event_patch_not_found_response(sid, user_id)
     except PyMongoError as exc:
         raise StorageUnavailableError("mongodb") from exc
+
+    refresh_session_state(sid, user_id)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    set_session_cookie(response, sid)
+    return response
+
+
+@router.post("/events/{event_id}/like")
+@router.post("/event/{event_id}/like")
+def like_event(request: Request, event_id: str) -> Response:
+    sid, user_id = get_current_user_id(request)
+    if user_id is None:
+        response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
+        if sid is not None:
+            refresh_session_state(sid)
+            set_session_cookie(response, sid)
+        return response
+
+    parsed_event_id = parse_object_id(event_id)
+    if parsed_event_id is None:
+        return event_reaction_not_found_response(sid, user_id)
+
+    try:
+        document = events_collection.find_one({"_id": parsed_event_id}, {"title": 1})
+    except PyMongoError as exc:
+        raise StorageUnavailableError("mongodb") from exc
+
+    if document is None:
+        return event_reaction_not_found_response(sid, user_id)
+
+    upsert_event_reaction(event_id, user_id, 1)
+    invalidate_reactions_cache(document["title"])
+
+    refresh_session_state(sid, user_id)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    set_session_cookie(response, sid)
+    return response
+
+
+@router.post("/events/{event_id}/dislike")
+@router.post("/event/{event_id}/dislike")
+def dislike_event(request: Request, event_id: str) -> Response:
+    sid, user_id = get_current_user_id(request)
+    if user_id is None:
+        response = Response(status_code=status.HTTP_401_UNAUTHORIZED)
+        if sid is not None:
+            refresh_session_state(sid)
+            set_session_cookie(response, sid)
+        return response
+
+    parsed_event_id = parse_object_id(event_id)
+    if parsed_event_id is None:
+        return event_reaction_not_found_response(sid, user_id)
+
+    try:
+        document = events_collection.find_one({"_id": parsed_event_id}, {"title": 1})
+    except PyMongoError as exc:
+        raise StorageUnavailableError("mongodb") from exc
+
+    if document is None:
+        return event_reaction_not_found_response(sid, user_id)
+
+    upsert_event_reaction(event_id, user_id, -1)
+    invalidate_reactions_cache(document["title"])
 
     refresh_session_state(sid, user_id)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)

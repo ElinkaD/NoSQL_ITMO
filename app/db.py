@@ -1,8 +1,17 @@
+from cassandra import ConsistencyLevel
+from cassandra.auth import PlainTextAuthProvider
+from cassandra.cluster import Cluster, Session
 from pymongo import ASCENDING, MongoClient
 from pymongo.collection import Collection
 from redis import Redis
 
 from app.config import (
+    CASSANDRA_CONSISTENCY,
+    CASSANDRA_HOSTS,
+    CASSANDRA_KEYSPACE,
+    CASSANDRA_PASSWORD,
+    CASSANDRA_PORT,
+    CASSANDRA_USERNAME,
     MONGODB_CONNECT_TIMEOUT_MS,
     MONGODB_DATABASE,
     MONGODB_HOST,
@@ -49,6 +58,24 @@ mongo_db = mongo_cli[MONGODB_DATABASE]
 users_collection: Collection = mongo_db["users"]
 events_collection: Collection = mongo_db["events"]
 
+consistency_level = getattr(ConsistencyLevel, CASSANDRA_CONSISTENCY, None)
+if consistency_level is None:
+    raise RuntimeError(f"Unsupported Cassandra consistency level: {CASSANDRA_CONSISTENCY}")
+
+auth_provider = None
+if CASSANDRA_USERNAME is not None:
+    auth_provider = PlainTextAuthProvider(
+        username=CASSANDRA_USERNAME,
+        password=CASSANDRA_PASSWORD or "",
+    )
+
+cassandra_cluster = Cluster(
+    contact_points=CASSANDRA_HOSTS,
+    port=CASSANDRA_PORT,
+    auth_provider=auth_provider,
+)
+_cassandra_session: Session | None = None
+
 
 def ensure_indexes() -> None:
     users_collection.create_index([("username", ASCENDING)], unique=True)
@@ -61,3 +88,49 @@ def ensure_indexes() -> None:
     events_collection.create_index([("category", ASCENDING), ("created_at", ASCENDING)])
     events_collection.create_index([("started_at", ASCENDING)])
     events_collection.create_index([("price", ASCENDING)])
+
+
+def ensure_cassandra_schema() -> None:
+    global _cassandra_session
+
+    try:
+        admin_session = cassandra_cluster.connect()
+        admin_session.execute(
+            f"""
+            CREATE KEYSPACE IF NOT EXISTS {CASSANDRA_KEYSPACE}
+            WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': 1}}
+            """
+        )
+        admin_session.set_keyspace(CASSANDRA_KEYSPACE)
+        admin_session.execute(
+            """
+            CREATE TABLE IF NOT EXISTS event_reactions (
+                event_id text,
+                created_by text,
+                like_value tinyint,
+                created_at timestamp,
+                PRIMARY KEY ((event_id), created_by)
+            )
+            """
+        )
+        admin_session.execute(
+            "CREATE INDEX IF NOT EXISTS event_reactions_created_by_idx ON event_reactions (created_by)"
+        )
+        admin_session.execute(
+            "CREATE INDEX IF NOT EXISTS event_reactions_like_value_idx ON event_reactions (like_value)"
+        )
+        _cassandra_session = admin_session
+    except Exception as exc:
+        raise StorageUnavailableError("cassandra") from exc
+
+
+def get_cassandra_session() -> Session:
+    global _cassandra_session
+
+    if _cassandra_session is None:
+        ensure_cassandra_schema()
+
+    if _cassandra_session is None:
+        raise StorageUnavailableError("cassandra")
+
+    return _cassandra_session

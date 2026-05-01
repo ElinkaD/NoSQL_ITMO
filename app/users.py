@@ -18,6 +18,7 @@ from app.common import (
     parse_uint_parameter,
 )
 from app.db import StorageUnavailableError, events_collection, users_collection
+from app.reactions import empty_reactions, get_reactions_by_titles, should_include_reactions
 from app.sessions import (
     clear_session_cookie,
     create_session,
@@ -323,8 +324,18 @@ def list_user_events(request: Request, user_id: str) -> JSONResponse:
     if limit is not None:
         documents = documents[:limit]
 
+    include_reactions = should_include_reactions(request.query_params.get("include"))
+    serialized_events = [serialize_event(document) for document in documents]
+    if include_reactions and serialized_events:
+        reactions_by_title = get_reactions_by_titles([event["title"] for event in serialized_events])
+        for event in serialized_events:
+            event["reactions"] = reactions_by_title.get(event["title"], empty_reactions())
+    elif include_reactions:
+        for event in serialized_events:
+            event["reactions"] = empty_reactions()
+
     response = JSONResponse(
-        content={"events": [serialize_event(document) for document in documents], "count": len(documents)}
+        content={"events": serialized_events, "count": len(documents)}
     )
     if sid is not None:
         set_session_cookie(response, sid)
