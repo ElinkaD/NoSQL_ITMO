@@ -1,5 +1,4 @@
 import hashlib
-import json
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -92,39 +91,36 @@ def upsert_event_reaction(event_id: str, user_id: str, like_value: int) -> None:
 
 def _read_cached_reactions(title: str) -> dict[str, int] | None:
     try:
-        cached_payload = redis_cli.get(reactions_cache_key(title))
+        cached_reactions = redis_cli.hgetall(reactions_cache_key(title))
     except RedisError as exc:
         raise StorageUnavailableError("redis") from exc
 
-    if cached_payload is None:
-        return None
-
-    try:
-        cached_reactions = json.loads(cached_payload)
-    except json.JSONDecodeError:
-        invalidate_reactions_cache(title)
-        return None
-
-    if not isinstance(cached_reactions, dict):
-        invalidate_reactions_cache(title)
+    if not cached_reactions:
         return None
 
     likes = cached_reactions.get("likes")
     dislikes = cached_reactions.get("dislikes")
-    if not isinstance(likes, int) or not isinstance(dislikes, int):
+    try:
+        parsed_likes = int(likes)
+        parsed_dislikes = int(dislikes)
+    except (TypeError, ValueError):
         invalidate_reactions_cache(title)
         return None
 
-    return {"likes": likes, "dislikes": dislikes}
+    return {"likes": parsed_likes, "dislikes": parsed_dislikes}
 
 
 def _write_cached_reactions(title: str, reactions: dict[str, int]) -> None:
     try:
-        redis_cli.setex(
-            reactions_cache_key(title),
-            APP_LIKE_TTL,
-            json.dumps(reactions),
+        cache_key = reactions_cache_key(title)
+        redis_cli.hset(
+            cache_key,
+            mapping={
+                "likes": reactions["likes"],
+                "dislikes": reactions["dislikes"],
+            },
         )
+        redis_cli.expire(cache_key, APP_LIKE_TTL)
     except RedisError as exc:
         raise StorageUnavailableError("redis") from exc
 
@@ -191,3 +187,21 @@ def get_reactions_by_titles(titles: list[str]) -> dict[str, dict[str, int]]:
             _write_cached_reactions(title, title_reactions)
 
     return {title: reactions_by_title.get(title, empty_reactions()) for title in unique_titles}
+
+
+def refresh_reactions_cache(title: str) -> dict[str, int]:
+    try:
+        related_documents = events_collection.find(
+            {"title": title},
+            {"_id": 1},
+        )
+    except PyMongoError as exc:
+        raise StorageUnavailableError("mongodb") from exc
+
+    event_ids = [str(document["_id"]) for document in related_documents]
+    reactions = _load_reactions_from_cassandra(event_ids)
+    if reactions is None:
+        reactions = empty_reactions()
+
+    _write_cached_reactions(title, reactions)
+    return reactions

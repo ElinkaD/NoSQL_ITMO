@@ -19,7 +19,7 @@ from app.db import StorageUnavailableError, events_collection, users_collection
 from app.reactions import (
     empty_reactions,
     get_reactions_by_titles,
-    invalidate_reactions_cache,
+    refresh_reactions_cache,
     should_include_reactions,
     upsert_event_reaction,
 )
@@ -459,7 +459,7 @@ def like_event(request: Request, event_id: str) -> Response:
         return event_reaction_not_found_response(sid, user_id)
 
     upsert_event_reaction(event_id, user_id, 1)
-    invalidate_reactions_cache(document["title"])
+    refresh_reactions_cache(document["title"])
 
     refresh_session_state(sid, user_id)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -491,7 +491,7 @@ def dislike_event(request: Request, event_id: str) -> Response:
         return event_reaction_not_found_response(sid, user_id)
 
     upsert_event_reaction(event_id, user_id, -1)
-    invalidate_reactions_cache(document["title"])
+    refresh_reactions_cache(document["title"])
 
     refresh_session_state(sid, user_id)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
