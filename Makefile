@@ -5,6 +5,11 @@
 run:
 	docker compose --env-file .env.local up -d --build
 
+# Rebuilds and restarts only the frontend service.
+.PHONY: frontend
+frontend:
+	docker compose --env-file .env.local up -d --build --no-deps frontend
+
 # Runs all services without detached mode (for debugging).
 .PHONY: rund
 rund:

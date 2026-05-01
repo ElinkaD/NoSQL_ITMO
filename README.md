@@ -121,6 +121,53 @@ make run
 make services
 ```
 
+### Тестовый React frontend
+
+Для быстрого ручного тестирования всех endpoint'ов добавлен React-клиент в `frontend/`
+
+Через Docker Compose фронт теперь поднимается вместе с бэкендом
+
+```bash
+make run
+```
+
+После старта:
+
+- backend доступен на `http://localhost:8080`
+- frontend доступен на `http://localhost:4173`
+
+Фронт в compose-сценарии уже настроен на прямую работу с `http://localhost:8080`
+
+Если менялся только фронт и не хочется перезапускать весь стенд:
+
+```bash
+make frontend
+```
+
+Эта команда пересобирает и перезапускает только сервис `frontend`
+
+Локальная разработка без Docker тоже доступна
+
+Требования:
+
+- Node.js 20+
+
+Запуск в dev-режиме:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+После старта откройте `http://localhost:5173`
+
+- фронт отправляет запросы с `credentials: include`
+- в `dev` по умолчанию используется `base URL = /api`
+- Vite proxy автоматически проксирует `/api/*` в `http://localhost:8080/*`
+- в Docker-сборке по умолчанию используется `base URL = http://localhost:8080`
+- это позволяет тестировать cookie-based сессии `POST /session`, `POST /auth/login`, `POST /auth/logout` прямо из браузера
+
 Остановка
 
 ```bash
