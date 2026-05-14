@@ -89,46 +89,14 @@ def ensure_indexes() -> None:
     events_collection.create_index([("started_at", ASCENDING)])
     events_collection.create_index([("price", ASCENDING)])
 
-
-def ensure_cassandra_schema() -> None:
-    global _cassandra_session
-
-    try:
-        admin_session = cassandra_cluster.connect()
-        admin_session.execute(
-            f"""
-            CREATE KEYSPACE IF NOT EXISTS {CASSANDRA_KEYSPACE}
-            WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': 1}}
-            """
-        )
-        admin_session.set_keyspace(CASSANDRA_KEYSPACE)
-        admin_session.execute(
-            """
-            CREATE TABLE IF NOT EXISTS event_reactions (
-                event_id text,
-                created_by text,
-                like_value tinyint,
-                created_at timestamp,
-                PRIMARY KEY ((event_id), created_by)
-            )
-            """
-        )
-        admin_session.execute(
-            "CREATE INDEX IF NOT EXISTS event_reactions_created_by_idx ON event_reactions (created_by)"
-        )
-        admin_session.execute(
-            "CREATE INDEX IF NOT EXISTS event_reactions_like_value_idx ON event_reactions (like_value)"
-        )
-        _cassandra_session = admin_session
-    except Exception as exc:
-        raise StorageUnavailableError("cassandra") from exc
-
-
 def get_cassandra_session() -> Session:
     global _cassandra_session
 
     if _cassandra_session is None:
-        ensure_cassandra_schema()
+        try:
+            _cassandra_session = cassandra_cluster.connect(CASSANDRA_KEYSPACE)
+        except Exception as exc:
+            raise StorageUnavailableError("cassandra") from exc
 
     if _cassandra_session is None:
         raise StorageUnavailableError("cassandra")
