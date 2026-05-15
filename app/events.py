@@ -23,6 +23,7 @@ from app.reactions import (
     should_include_reactions,
     upsert_event_reaction,
 )
+from app.reviews import empty_reviews_summary, get_reviews_summary_by_titles, should_include_reviews
 from app.sessions import (
     get_active_sid,
     get_current_user_id,
@@ -318,6 +319,7 @@ def list_events(request: Request) -> JSONResponse:
         documents = documents[:limit]
 
     include_reactions = should_include_reactions(request.query_params.get("include"))
+    include_reviews = should_include_reviews(request.query_params.get("include"))
     serialized_events = [serialize_event(document) for document in documents]
     if include_reactions and serialized_events:
         reactions_by_title = get_reactions_by_titles([event["title"] for event in serialized_events])
@@ -326,6 +328,14 @@ def list_events(request: Request) -> JSONResponse:
     elif include_reactions:
         for event in serialized_events:
             event["reactions"] = empty_reactions()
+
+    if include_reviews and serialized_events:
+        reviews_by_title = get_reviews_summary_by_titles([event["title"] for event in serialized_events])
+        for event in serialized_events:
+            event["reviews"] = reviews_by_title.get(event["title"], empty_reviews_summary())
+    elif include_reviews:
+        for event in serialized_events:
+            event["reviews"] = empty_reviews_summary()
 
     response = JSONResponse(
         content={"events": serialized_events, "count": len(documents)}
@@ -353,6 +363,8 @@ def get_event(request: Request, event_id: str) -> JSONResponse:
     event = serialize_event(document)
     if should_include_reactions(request.query_params.get("include")):
         event["reactions"] = get_reactions_by_titles([event["title"]]).get(event["title"], empty_reactions())
+    if should_include_reviews(request.query_params.get("include")):
+        event["reviews"] = get_reviews_summary_by_titles([event["title"]]).get(event["title"], empty_reviews_summary())
 
     response = JSONResponse(content=event)
     if sid is not None:

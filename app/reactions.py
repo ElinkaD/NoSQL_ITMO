@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pymongo.errors import PyMongoError
 from redis.exceptions import RedisError
 
+from app.common import parse_include_values
 from app.config import APP_LIKE_TTL
 from app.db import (
     StorageUnavailableError,
@@ -22,11 +23,7 @@ _select_reactions_statement = None
 
 
 def should_include_reactions(include_value: str | None) -> bool:
-    if include_value is None:
-        return False
-
-    include_parts = {part.strip() for part in include_value.split(",") if part.strip()}
-    return "reactions" in include_parts
+    return "reactions" in parse_include_values(include_value)
 
 
 def empty_reactions() -> dict[str, int]:

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595",
     "name": "NoSQL_ITMO Labs",
-    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки, реакции и негативные сценарии.",
+    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки, реакции, отзывы и негативные сценарии.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -3149,6 +3149,496 @@
         }
       ],
       "id": "52399890-a4b7e2cd-25b0-4a39-a913-lab5reactions"
+    },
+    {
+      "name": "Lab 6 Reviews",
+      "item": [
+        {
+          "name": "Create Primary Review For Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"{{primary_review_comment}}\",\n  \"rating\": {{primary_review_rating}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/reviews",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "reviews"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Review id is returned', function () {",
+                  "  pm.expect(typeof body.id).to.eql('string');",
+                  "});",
+                  "if (body.id) {",
+                  "  pm.collectionVariables.set('primary_review_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Outsider Review For Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{outsider_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"{{outsider_review_comment}}\",\n  \"rating\": {{outsider_review_rating}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/reviews",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "reviews"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "  pm.collectionVariables.set('outsider_review_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate Primary Review Returns Conflict",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"{{primary_review_comment}}\",\n  \"rating\": {{primary_review_rating}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/reviews",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "reviews"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Already exists message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'Already exists' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Event Reviews",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/reviews?limit=10&offset=0",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Two reviews are returned', function () {",
+                  "  pm.expect(Array.isArray(body.reviews)).to.eql(true);",
+                  "  pm.expect(body.count).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Primary Review",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"{{updated_review_comment}}\",\n  \"rating\": {{updated_review_rating}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/reviews/{{primary_review_id}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "reviews",
+                "{{primary_review_id}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Event Card With Reviews Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}?include=reviews",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}"
+              ],
+              "query": [
+                {
+                  "key": "include",
+                  "value": "reviews"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Aggregated reviews are returned', function () {",
+                  "  pm.expect(body.reviews).to.eql({ count: 2, rating: 4.5 });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Events With Reactions And Reviews Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?title={{primary_event_title}}&include=reactions,reviews",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "{{primary_event_title}}"
+                },
+                {
+                  "key": "include",
+                  "value": "reactions,reviews"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Events include both reactions and reviews', function () {",
+                  "  pm.expect(body.count).to.be.at.least(2);",
+                  "  pm.expect(body.events.every((event) => typeof event.reactions === 'object' && typeof event.reviews === 'object')).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Review For Missing Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"{{primary_review_comment}}\",\n  \"rating\": {{primary_review_rating}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/000000000000000000000000/reviews",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "000000000000000000000000",
+                "reviews"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Event not found message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'Event not found' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Review Without Auth",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"{{updated_review_comment}}\",\n  \"rating\": {{updated_review_rating}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/reviews/{{primary_review_id}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "reviews",
+                "{{primary_review_id}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "id": "52399890-3d4bcc4d-e915-4709-a913-lab6reviews"
     }
   ],
   "variable": [
@@ -3273,6 +3763,14 @@
       "value": ""
     },
     {
+      "key": "primary_review_id",
+      "value": ""
+    },
+    {
+      "key": "outsider_review_id",
+      "value": ""
+    },
+    {
       "key": "primary_event_title",
       "value": "itmo meetup by elina {{run_id}}"
     },
@@ -3303,6 +3801,30 @@
     {
       "key": "event_city",
       "value": "санкт-петербург"
+    },
+    {
+      "key": "primary_review_comment",
+      "value": "solid meetup from primary reviewer {{run_id}}"
+    },
+    {
+      "key": "outsider_review_comment",
+      "value": "useful event from outsider reviewer {{run_id}}"
+    },
+    {
+      "key": "updated_review_comment",
+      "value": "updated review after revisit {{run_id}}"
+    },
+    {
+      "key": "primary_review_rating",
+      "value": "5"
+    },
+    {
+      "key": "updated_review_rating",
+      "value": "4"
+    },
+    {
+      "key": "outsider_review_rating",
+      "value": "5"
     },
     {
       "key": "date_from",

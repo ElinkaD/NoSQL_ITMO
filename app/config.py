@@ -11,6 +11,7 @@ APP_HOST = require_env("APP_HOST")
 APP_PORT = int(require_env("APP_PORT"))
 SESSION_TTL = int(require_env("APP_USER_SESSION_TTL"))
 APP_LIKE_TTL = int(require_env("APP_LIKE_TTL"))
+APP_EVENT_REVIEWS_TTL = int(require_env("APP_EVENT_REVIEWS_TTL"))
 
 REDIS_HOST = require_env("REDIS_HOST")
 REDIS_PORT = int(require_env("REDIS_PORT"))
