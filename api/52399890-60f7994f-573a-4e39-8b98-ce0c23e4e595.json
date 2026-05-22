@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595",
     "name": "NoSQL_ITMO Labs",
-    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки и негативные сценарии.",
+    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки, реакции и негативные сценарии.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1652,7 +1652,7 @@
           ]
         },
         {
-          "name": "Duplicate Event",
+          "name": "Create Secondary Event With Same Title",
           "id": "52399890-1dc36b2f-a3fd-4759-86aa-8d113b6e3405",
           "request": {
             "method": "POST",
@@ -1689,12 +1689,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 409', function () {",
-                  "  pm.response.to.have.status(409);",
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
                   "});",
-                  "pm.test('Duplicate event message is returned', function () {",
-                  "  pm.expect(pm.response.json()).to.eql({ message: 'event already exists' });",
-                  "});"
+                  "const body = pm.response.json();",
+                  "pm.test('Secondary event id is returned', function () {",
+                  "  pm.expect(body).to.have.property('id');",
+                  "});",
+                  "if (body.id) {",
+                  "  pm.collectionVariables.set('secondary_event_id', body.id);",
+                  "}"
                 ]
               }
             }
@@ -2820,6 +2824,331 @@
         }
       ],
       "id": "52399890-11bea67d-185d-478e-992f-d33888e1e18d"
+    },
+    {
+      "name": "Lab 5 Reactions",
+      "item": [
+        {
+          "name": "Like Primary Event via Singular Path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/event/{{primary_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "event",
+                "{{primary_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dislike Secondary Event via Plural Path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{outsider_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{secondary_event_id}}/dislike",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{secondary_event_id}}",
+                "dislike"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('secondary_event_id')) {",
+                  "  throw new Error('secondary_event_id is empty. Run Create Secondary Event With Same Title first.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Event Card With Reactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}?include=reactions",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}"
+              ],
+              "query": [
+                {
+                  "key": "include",
+                  "value": "reactions"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Aggregated reactions are returned', function () {",
+                  "  pm.expect(body.reactions).to.eql({ likes: 1, dislikes: 1 });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Events by Title With Reactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events?title={{primary_event_title}}&include=reactions",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "{{primary_event_title}}"
+                },
+                {
+                  "key": "include",
+                  "value": "reactions"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('At least two events with aggregated reactions are returned', function () {",
+                  "  pm.expect(body.count).to.be.at.least(2);",
+                  "  pm.expect(body.events.every((event) => event.reactions && event.reactions.likes === 1 && event.reactions.dislikes === 1)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Owner Events With Reactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/users/{{owner_user_id}}/events?include=reactions",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "users",
+                "{{owner_user_id}}",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "include",
+                  "value": "reactions"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Owner events include reactions object', function () {",
+                  "  pm.expect(Array.isArray(body.events)).to.eql(true);",
+                  "  pm.expect(body.events.length).to.be.at.least(2);",
+                  "  pm.expect(body.events.every((event) => typeof event.reactions === 'object')).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Missing Event Returns Event Not Found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/event/000000000000000000000000/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "event",
+                "000000000000000000000000",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Event not found message is returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ message: 'Event not found' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Without Auth",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/event/{{primary_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "event",
+                "{{primary_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "id": "52399890-a4b7e2cd-25b0-4a39-a913-lab5reactions"
     }
   ],
   "variable": [
@@ -2937,6 +3266,10 @@
     },
     {
       "key": "primary_event_id",
+      "value": ""
+    },
+    {
+      "key": "secondary_event_id",
       "value": ""
     },
     {
