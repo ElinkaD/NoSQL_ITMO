@@ -69,3 +69,9 @@ def parse_non_empty_string_parameter(value: str | None) -> str | None:
 def parse_optional_parameter(value: str | None, parser: Callable[[str | None], T | None]) -> tuple[T | None, bool]:
     parsed_value = parser(value)
     return parsed_value, value is not None and parsed_value is None
+
+
+def parse_include_values(value: str | None) -> set[str]:
+    if value is None:
+        return set()
+    return {part.strip() for part in value.split(",") if part.strip()}

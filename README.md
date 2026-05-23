@@ -43,6 +43,15 @@ Backend-сервис платформы мероприятий для практ
 - для одинакового `title` можно создавать несколько разных встреч на разное время
 - для автогрейдера поддержан alias `POST /event/{event_id}/like|dislike`
 
+## Lab 6
+
+Текущая версия сервиса дополнительно реализует
+
+- `POST /events/{event_id}/reviews`
+- `GET /events/{event_id}/reviews`
+- `PATCH /events/{event_id}/reviews/{review_id}`
+- `GET /events`, `GET /events/{id}`, `GET /users/{id}/events` поддерживают `?include=reviews`
+
 ## Совместимость с предыдущими лабами
 
 Сервис сохраняет
@@ -67,6 +76,7 @@ Redis хранит
 
 - сессии по ключам `sid:{session_id}`
 - кэш счетчиков реакций по ключам `event:{md5(title)}:reactions`
+- кэш агрегатов отзывов по ключам `event:{md5(title)}:reviews`
 
 Внутри session hash хранятся
 
@@ -80,6 +90,15 @@ Redis хранит
 {
   "likes": 1,
   "dislikes": 0
+}
+```
+
+В кэше отзывов хранится JSON вида
+
+```json
+{
+  "count": 3,
+  "rating": 4.7
 }
 ```
 
@@ -119,6 +138,20 @@ Cassandra используется как основное хранилище р
 - `created_by`
 - `like_value`
 
+Также создается таблица `event_reviews`
+
+- `event_id text`
+- `created_by text`
+- `id uuid`
+- `rating tinyint`
+- `comment text`
+- `created_at timestamp`
+- `updated_at timestamp`
+
+Первичный ключ
+
+- `PRIMARY KEY ((event_id), created_by)`
+
 ## Конфигурация
 
 Основной конфигурационный файл проекта это `.env.local`
@@ -128,6 +161,7 @@ APP_HOST=localhost
 APP_PORT=8080
 APP_USER_SESSION_TTL=60
 APP_LIKE_TTL=60
+APP_EVENT_REVIEWS_TTL=120
 
 REDIS_HOST=redis
 REDIS_PORT=6379
@@ -210,6 +244,13 @@ docker compose --env-file .env.local exec -T cassandra \
   cqlsh -e "DESCRIBE TABLE testkeyspace.event_reactions"
 ```
 
+Проверить таблицу отзывов
+
+```bash
+docker compose --env-file .env.local exec -T cassandra \
+  cqlsh -e "DESCRIBE TABLE testkeyspace.event_reviews"
+```
+
 ## Postman коллекция
 
 Для проверки приложения используйте коллекцию
@@ -222,6 +263,7 @@ docker compose --env-file .env.local exec -T cassandra \
 - сценарии lab 3 по регистрации пользователей и авторизации
 - сценарии lab 4 по поиску пользователей и событий
 - сценарии lab 5 по реакциям и `include=reactions`
+- сценарии lab 6 по отзывам и `include=reviews`
 - карточки пользователей и событий
 - редактирование событий
 - негативные сценарии `400`, `401`, `404`
@@ -237,4 +279,13 @@ curl -i -X POST http://localhost:8080/event/<event_id>/like \
   -H 'Cookie: X-Session-Id=<sid>'
 
 curl -i "http://localhost:8080/events/<event_id>?include=reactions"
+
+curl -i -X POST http://localhost:8080/events/<event_id>/reviews \
+  -H 'Cookie: X-Session-Id=<sid>' \
+  -H 'Content-Type: application/json' \
+  -d '{"comment":"Отличное событие","rating":5}'
+
+curl -i "http://localhost:8080/events/<event_id>/reviews?limit=10&offset=0"
+
+curl -i "http://localhost:8080/events/<event_id>?include=reactions,reviews"
 ```

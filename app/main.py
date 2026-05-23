@@ -5,6 +5,7 @@ from redis.exceptions import RedisError
 
 from app.db import StorageUnavailableError, ensure_indexes
 from app.events import router as events_router
+from app.reviews import router as reviews_router
 from app.sessions import router as sessions_router
 from app.users import router as users_router
 
@@ -13,6 +14,7 @@ app = FastAPI()
 app.include_router(sessions_router)
 app.include_router(users_router)
 app.include_router(events_router)
+app.include_router(reviews_router)
 
 
 @app.on_event("startup")
