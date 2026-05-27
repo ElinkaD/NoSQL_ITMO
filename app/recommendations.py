@@ -178,6 +178,9 @@ def _build_recommendations_from_mongo(rows: list[dict[str, object]]) -> list[dic
 def get_recommendations_for_user(user_id: str) -> list[dict[str, object]]:
     cached_events = _read_cached_recommendations(user_id)
     if cached_events is not None:
+        # при cache hit продлеваем TTL до полного значения,
+        # чтобы кэш оставался "свежим" после повторного запроса
+        _write_cached_recommendations(user_id, cached_events)
         return cached_events
 
     # при cache miss пересчитываем рекомендации из Neo4j + Mongo и сразу кладем готовый ответ в Redis
