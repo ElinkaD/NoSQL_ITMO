@@ -1,6 +1,7 @@
 from cassandra import ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster, Session
+from neo4j import Driver, GraphDatabase
 from pymongo import ASCENDING, MongoClient
 from pymongo.collection import Collection
 from redis import Redis
@@ -20,6 +21,9 @@ from app.config import (
     MONGODB_SERVER_SELECTION_TIMEOUT_MS,
     MONGODB_SOCKET_TIMEOUT_MS,
     MONGODB_USER,
+    NEO4J_PASSWORD,
+    NEO4J_URL,
+    NEO4J_USER,
     REDIS_DB,
     REDIS_HOST,
     REDIS_PASSWORD,
@@ -75,6 +79,10 @@ cassandra_cluster = Cluster(
     auth_provider=auth_provider,
 )
 _cassandra_session: Session | None = None
+neo4j_driver: Driver = GraphDatabase.driver(
+    NEO4J_URL,
+    auth=(NEO4J_USER, NEO4J_PASSWORD) if NEO4J_USER is not None else None,
+)
 
 
 def ensure_indexes() -> None:
@@ -89,6 +97,7 @@ def ensure_indexes() -> None:
     events_collection.create_index([("started_at", ASCENDING)])
     events_collection.create_index([("price", ASCENDING)])
 
+
 def get_cassandra_session() -> Session:
     global _cassandra_session
 
@@ -102,3 +111,7 @@ def get_cassandra_session() -> Session:
         raise StorageUnavailableError("cassandra")
 
     return _cassandra_session
+
+
+def get_neo4j_driver() -> Driver:
+    return neo4j_driver

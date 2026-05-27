@@ -52,6 +52,21 @@ Backend-сервис платформы мероприятий для практ
 - `PATCH /events/{event_id}/reviews/{review_id}`
 - `GET /events`, `GET /events/{id}`, `GET /users/{id}/events` поддерживают `?include=reviews`
 
+## Lab 7
+
+Текущая версия сервиса дополнительно реализует
+
+- `GET /recommendations`
+
+### Возможности lab 7
+
+- рекомендации мероприятий строятся по графу лайков в Neo4j
+- рекомендации доступны только авторизованному пользователю и только для самого себя
+- рекомендации кэшируются в Redis по стратегии cache-aside
+- в рекомендациях не возвращаются мероприятия, которые пользователь уже лайкал
+- если в рекомендации попадает несколько событий с одинаковым `title`, возвращается только ближайшее по `started_at`
+- рекомендации сортируются по релевантности: от большего числа лайков к меньшему
+
 ## Совместимость с предыдущими лабами
 
 Сервис сохраняет
@@ -60,6 +75,8 @@ Backend-сервис платформы мероприятий для практ
 - механику анонимных Redis-сессий из lab 2
 - регистрацию пользователей, login/logout и базовую работу с событиями из lab 3
 - поиск, карточки и редактирование событий из lab 4
+- реакции из lab 5
+- отзывы и summary по ним из lab 6
 
 Уточнения
 
@@ -77,6 +94,7 @@ Redis хранит
 - сессии по ключам `sid:{session_id}`
 - кэш счетчиков реакций по ключам `event:{md5(title)}:reactions`
 - кэш агрегатов отзывов по ключам `event:{md5(title)}:reviews`
+- кэш рекомендаций по ключам `user:{user_id}:recomms`
 
 Внутри session hash хранятся
 
@@ -101,6 +119,8 @@ Redis хранит
   "rating": 4.7
 }
 ```
+
+В кэше рекомендаций в Redis hash хранится поле `events` со списком мероприятий в JSON
 
 ### MongoDB
 
@@ -133,6 +153,27 @@ Cassandra используется как основное хранилище р
 
 - `PRIMARY KEY ((event_id), created_by)`
 
+### Neo4j
+
+Neo4j используется как граф рекомендаций.
+
+Узлы
+
+- `(:User {id})`
+- `(:Event {id, title})`
+
+Связи
+
+- `(user)-[:LIKED]->(event)`
+
+Граф обновляется при
+
+- создании пользователя
+- создании события
+- постановке лайка
+
+Дизлайки не удаляют связь `LIKED`, потому что lab 7 учитывает только сам факт лайка.
+
 Также создаются secondary indexes по
 
 - `created_by`
@@ -162,6 +203,7 @@ APP_PORT=8080
 APP_USER_SESSION_TTL=60
 APP_LIKE_TTL=60
 APP_EVENT_REVIEWS_TTL=120
+APP_RECOMMENDATIONS_TTL=60
 
 REDIS_HOST=redis
 REDIS_PORT=6379
@@ -187,6 +229,10 @@ CASSANDRA_USERNAME=
 CASSANDRA_PASSWORD=
 CASSANDRA_KEYSPACE=testkeyspace
 CASSANDRA_CONSISTENCY=ONE
+
+NEO4J_URL=bolt://neo4j:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
 ```
 
 `MONGODB_USER` и `MONGODB_PASSWORD` используются приложением.
@@ -251,6 +297,14 @@ docker compose --env-file .env.local exec -T cassandra \
   cqlsh -e "DESCRIBE TABLE testkeyspace.event_reviews"
 ```
 
+Проверить граф Neo4j
+
+```bash
+docker compose --env-file .env.local exec -T neo4j \
+  cypher-shell -a bolt://localhost:7687 -u neo4j -p password \
+  "MATCH (n) RETURN labels(n), count(*)"
+```
+
 ## Postman коллекция
 
 Для проверки приложения используйте коллекцию
@@ -264,6 +318,7 @@ docker compose --env-file .env.local exec -T cassandra \
 - сценарии lab 4 по поиску пользователей и событий
 - сценарии lab 5 по реакциям и `include=reactions`
 - сценарии lab 6 по отзывам и `include=reviews`
+- сценарии lab 7 по рекомендациям и кэшу рекомендаций
 - карточки пользователей и событий
 - редактирование событий
 - негативные сценарии `400`, `401`, `404`
@@ -288,4 +343,7 @@ curl -i -X POST http://localhost:8080/events/<event_id>/reviews \
 curl -i "http://localhost:8080/events/<event_id>/reviews?limit=10&offset=0"
 
 curl -i "http://localhost:8080/events/<event_id>?include=reactions,reviews"
+
+curl -i http://localhost:8080/recommendations \
+  -H 'Cookie: X-Session-Id=<sid>'
 ```

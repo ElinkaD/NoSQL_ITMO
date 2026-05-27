@@ -7,8 +7,8 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
-from redis.exceptions import RedisError
 
+from app.cache import delete_cache_key, read_hash, write_hash
 from app.common import parse_include_values, parse_object_id, parse_optional_parameter, parse_uint_parameter
 from app.config import APP_EVENT_REVIEWS_TTL
 from app.db import (
@@ -16,7 +16,6 @@ from app.db import (
     consistency_level,
     events_collection,
     get_cassandra_session,
-    redis_cli,
 )
 from app.sessions import (
     get_active_sid,
@@ -73,10 +72,7 @@ def validate_review_rating(value: object) -> bool:
 
 
 def invalidate_reviews_cache(title: str) -> None:
-    try:
-        redis_cli.delete(reviews_cache_key(title))
-    except RedisError as exc:
-        raise StorageUnavailableError("redis") from exc
+    delete_cache_key(reviews_cache_key(title))
 
 
 def _prepare_statements() -> tuple[object, object, object, object]:
@@ -220,11 +216,7 @@ def update_review(event_id: str, user_id: str, rating: int, comment: str) -> Non
 
 
 def _read_cached_reviews_summary(title: str) -> dict[str, int | float] | None:
-    try:
-        cached_reviews = redis_cli.hgetall(reviews_cache_key(title))
-    except RedisError as exc:
-        raise StorageUnavailableError("redis") from exc
-
+    cached_reviews = read_hash(reviews_cache_key(title))
     if not cached_reviews:
         return None
 
@@ -241,18 +233,14 @@ def _read_cached_reviews_summary(title: str) -> dict[str, int | float] | None:
 
 
 def _write_cached_reviews_summary(title: str, summary: dict[str, int | float]) -> None:
-    try:
-        cache_key = reviews_cache_key(title)
-        redis_cli.hset(
-            cache_key,
-            mapping={
-                "count": summary["count"],
-                "rating": summary["rating"],
-            },
-        )
-        redis_cli.expire(cache_key, APP_EVENT_REVIEWS_TTL)
-    except RedisError as exc:
-        raise StorageUnavailableError("redis") from exc
+    write_hash(
+        reviews_cache_key(title),
+        mapping={
+            "count": summary["count"],
+            "rating": summary["rating"],
+        },
+        ttl=APP_EVENT_REVIEWS_TTL,
+    )
 
 
 def _build_reviews_summary(rows: list[object]) -> dict[str, int | float]:
