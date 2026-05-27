@@ -198,6 +198,12 @@ def list_recommendations(request: Request) -> Response:
         return response
 
     refresh_session_state(sid, user_id)
-    response = JSONResponse(content={"events": get_recommendations_for_user(user_id)})
+    events = get_recommendations_for_user(user_id)
+    response = JSONResponse(
+        content={
+            "events": events,
+            "count": len(events),
+        }
+    )
     set_session_cookie(response, sid)
     return response
