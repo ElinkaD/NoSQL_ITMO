@@ -31,7 +31,7 @@ services:
       CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE}
       CASSANDRA_CONSISTENCY: ${CASSANDRA_CONSISTENCY}
       NEO4J_URL: ${NEO4J_URL}
-      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_USERNAME: ${NEO4J_USERNAME}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD}
     ports:
       - "${APP_PORT}:${APP_PORT}"
@@ -80,7 +80,7 @@ services:
   neo4j:
     image: neo4j:5.26.26-trixie
     environment:
-      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
+      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -89,7 +89,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - cypher-shell -a bolt://localhost:7687 -u "${NEO4J_USER}" -p "${NEO4J_PASSWORD}" "RETURN 1" >/dev/null
+        - cypher-shell -a bolt://localhost:7687 -u "${NEO4J_USERNAME}" -p "${NEO4J_PASSWORD}" "RETURN 1" >/dev/null
       interval: 15s
       timeout: 10s
       retries: 20

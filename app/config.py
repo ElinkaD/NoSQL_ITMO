@@ -38,5 +38,5 @@ CASSANDRA_KEYSPACE = require_env("CASSANDRA_KEYSPACE")
 CASSANDRA_CONSISTENCY = require_env("CASSANDRA_CONSISTENCY").upper()
 
 NEO4J_URL = require_env("NEO4J_URL")
-NEO4J_USER = require_env("NEO4J_USER") or None
+NEO4J_USERNAME = require_env("NEO4J_USERNAME") or None
 NEO4J_PASSWORD = require_env("NEO4J_PASSWORD") or None

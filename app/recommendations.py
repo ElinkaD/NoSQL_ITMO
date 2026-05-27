@@ -77,16 +77,16 @@ def _write_cached_recommendations(user_id: str, events: list[dict[str, object]])
 
 def _load_recommendation_candidates(user_id: str) -> list[dict[str, object]]:
     # ищем "похожих" пользователей через общие лайки и берем их события,
-    # исключая уже лайкнутые event_id и любые события с тем же title.
+    # исключая только уже лайкнутые event_id.
+    # Дедупликацию по title делаем ниже уже на итоговой выдаче.
     rows = run_query(
         """
         MATCH (user:User {id: $user_id})
         OPTIONAL MATCH (user)-[:LIKED]->(liked:Event)
-        WITH user, collect(liked.id) AS liked_event_ids, collect(liked.title) AS liked_titles
+        WITH user, collect(liked.id) AS liked_event_ids
         MATCH (user)-[:LIKED]->(:Event)<-[:LIKED]-(other:User)-[:LIKED]->(candidate:Event)
         WHERE other.id <> $user_id
           AND NOT candidate.id IN liked_event_ids
-          AND NOT candidate.title IN liked_titles
         RETURN candidate.id AS event_id, count(DISTINCT other) AS score
         ORDER BY score DESC, event_id ASC
         """,

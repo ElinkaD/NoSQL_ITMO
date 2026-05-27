@@ -23,7 +23,7 @@ from app.config import (
     MONGODB_USER,
     NEO4J_PASSWORD,
     NEO4J_URL,
-    NEO4J_USER,
+    NEO4J_USERNAME,
     REDIS_DB,
     REDIS_HOST,
     REDIS_PASSWORD,
@@ -81,7 +81,7 @@ cassandra_cluster = Cluster(
 _cassandra_session: Session | None = None
 neo4j_driver: Driver = GraphDatabase.driver(
     NEO4J_URL,
-    auth=(NEO4J_USER, NEO4J_PASSWORD) if NEO4J_USER is not None else None,
+    auth=(NEO4J_USERNAME, NEO4J_PASSWORD) if NEO4J_USERNAME is not None else None,
 )
 
 
