@@ -16,6 +16,8 @@ from app.common import (
     parse_uint_parameter,
 )
 from app.db import StorageUnavailableError, events_collection, users_collection
+from app.event_serializers import serialize_event
+from app.recommendations import ensure_recommendation_event, record_recommendation_like
 from app.reactions import (
     empty_reactions,
     get_reactions_by_titles,
@@ -73,28 +75,6 @@ def event_reaction_not_found_response(sid: str | None, user_id: str | None = Non
             refresh_session_state(sid)
         set_session_cookie(response, sid)
     return response
-
-
-def serialize_event(document: dict[str, object]) -> dict[str, object]:
-    event = {
-        "id": str(document["_id"]),
-        "title": document["title"],
-        "location": dict(document["location"]),
-        "created_at": document["created_at"],
-        "created_by": document["created_by"],
-        "started_at": document["started_at"],
-        "finished_at": document["finished_at"],
-    }
-
-    if "category" in document:
-        event["category"] = document["category"]
-    if "price" in document:
-        event["price"] = document["price"]
-    if "description" in document:
-        event["description"] = document["description"]
-
-    return event
-
 
 def matches_started_date_range(
     document: dict[str, object],
@@ -261,6 +241,7 @@ async def create_event(request: Request) -> Response:
     except PyMongoError as exc:
         raise StorageUnavailableError("mongodb") from exc
 
+    ensure_recommendation_event(str(result.inserted_id), document["title"])
     refresh_session_state(sid, user_id)
     response = JSONResponse(
         status_code=status.HTTP_201_CREATED,
@@ -471,6 +452,7 @@ def like_event(request: Request, event_id: str) -> Response:
         return event_reaction_not_found_response(sid, user_id)
 
     upsert_event_reaction(event_id, user_id, 1)
+    record_recommendation_like(user_id, event_id, document["title"])
     refresh_reactions_cache(document["title"])
 
     refresh_session_state(sid, user_id)

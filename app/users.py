@@ -18,6 +18,8 @@ from app.common import (
     parse_uint_parameter,
 )
 from app.db import StorageUnavailableError, events_collection, users_collection
+from app.event_serializers import serialize_event
+from app.recommendations import ensure_recommendation_user
 from app.reactions import empty_reactions, get_reactions_by_titles, should_include_reactions
 from app.reviews import empty_reviews_summary, get_reviews_summary_by_titles, should_include_reviews
 from app.sessions import (
@@ -41,28 +43,6 @@ def serialize_user(document: dict[str, object]) -> dict[str, object]:
         "full_name": document["full_name"],
         "username": document["username"],
     }
-
-
-def serialize_event(document: dict[str, object]) -> dict[str, object]:
-    event = {
-        "id": str(document["_id"]),
-        "title": document["title"],
-        "location": dict(document["location"]),
-        "created_at": document["created_at"],
-        "created_by": document["created_by"],
-        "started_at": document["started_at"],
-        "finished_at": document["finished_at"],
-    }
-
-    if "category" in document:
-        event["category"] = document["category"]
-    if "price" in document:
-        event["price"] = document["price"]
-    if "description" in document:
-        event["description"] = document["description"]
-
-    return event
-
 
 def user_not_found_response(sid: str | None) -> JSONResponse:
     response = JSONResponse(
@@ -145,6 +125,7 @@ async def create_user(request: Request) -> Response:
         raise StorageUnavailableError("mongodb") from exc
 
     # создание новой сесси, чтобы пользователь автоматически считался залогиненным после регистрации
+    ensure_recommendation_user(str(result.inserted_id))
     new_sid = create_session(str(result.inserted_id))
     if sid is not None:
         delete_session(sid)

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595",
     "name": "NoSQL_ITMO Labs",
-    "description": "Коллекция для проверки совместимости No_Sql labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки, реакции, отзывы и негативные сценарии.",
+    "description": "Коллекция для проверки совместимости NoSQL labs.\n\nПокрывает health и session, регистрацию и авторизацию пользователей, события, поиск, карточки, реакции, отзывы, рекомендации и негативные сценарии.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -3639,6 +3639,536 @@
         }
       ],
       "id": "52399890-3d4bcc4d-e915-4709-a913-lab6reviews"
+    },
+    {
+      "name": "Lab 7 Recommendations",
+      "id": "52399890-8c5ef26d-6237-4d7c-9cc5-lab7recomms",
+      "item": [
+        {
+          "name": "Create Recommendation Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{recommendation_event_title}}\",\n  \"address\": \"{{event_address}}\",\n  \"started_at\": \"{{recommendation_event_started_at}}\",\n  \"finished_at\": \"{{recommendation_event_finished_at}}\",\n  \"category\": \"{{event_category}}\",\n  \"price\": {{event_price}},\n  \"description\": \"{{event_description}}\",\n  \"city\": \"{{event_city}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Recommendation event id is returned', function () {",
+                  "  pm.expect(typeof body.id).to.eql('string');",
+                  "});",
+                  "if (body.id) {",
+                  "  pm.collectionVariables.set('recommendation_event_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Recommendation Duplicate Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{recommendation_event_title}}\",\n  \"address\": \"{{event_address}}\",\n  \"started_at\": \"{{recommendation_duplicate_started_at}}\",\n  \"finished_at\": \"{{recommendation_duplicate_finished_at}}\",\n  \"category\": \"{{event_category}}\",\n  \"price\": {{event_price}},\n  \"description\": \"{{event_description}} duplicate\",\n  \"city\": \"{{event_city}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "  pm.collectionVariables.set('recommendation_duplicate_event_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Recommendation Alternative Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"{{recommendation_alt_title}}\",\n  \"address\": \"{{event_address}}\",\n  \"started_at\": \"{{recommendation_alt_started_at}}\",\n  \"finished_at\": \"{{recommendation_alt_finished_at}}\",\n  \"category\": \"concert\",\n  \"price\": {{event_price}},\n  \"description\": \"{{event_description}} alt\",\n  \"city\": \"{{event_city}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "  pm.collectionVariables.set('recommendation_alt_event_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Primary Event by Secondary User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{secondary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Primary Event by Outsider User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{outsider_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{primary_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{primary_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Recommendation Event by Outsider User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{outsider_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{recommendation_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{recommendation_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Recommendation Duplicate by Secondary User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{secondary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{recommendation_duplicate_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{recommendation_duplicate_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Like Recommendation Alternative by Secondary User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{secondary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/events/{{recommendation_alt_event_id}}/like",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "events",
+                "{{recommendation_alt_event_id}}",
+                "like"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 204', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Recommendations For Primary User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/recommendations",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "recommendations"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Recommendations are returned in relevance order', function () {",
+                  "  pm.expect(Array.isArray(body.events)).to.eql(true);",
+                  "  pm.expect(body.events.length).to.eql(2);",
+                  "  pm.expect(body.events[0].id).to.eql(pm.collectionVariables.get(\"recommendation_duplicate_event_id\"));",
+                  "  pm.expect(body.events[0].title).to.eql(pm.collectionVariables.get(\"recommendation_event_title\"));",
+                  "  pm.expect(body.events[1].id).to.eql(pm.collectionVariables.get(\"recommendation_alt_event_id\"));",
+                  "  pm.expect(body.events[1].title).to.eql(pm.collectionVariables.get(\"recommendation_alt_title\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Recommendations For Primary User From Cache",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{primary_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/recommendations",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "recommendations"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Cached recommendations keep the same payload', function () {",
+                  "  pm.expect(body.events.length).to.eql(2);",
+                  "  pm.expect(body.events[0].id).to.eql(pm.collectionVariables.get(\"recommendation_duplicate_event_id\"));",
+                  "  pm.expect(body.events[1].id).to.eql(pm.collectionVariables.get(\"recommendation_alt_event_id\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Recommendations Empty For Owner",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "X-Session-Id={{owner_sid}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/recommendations",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "recommendations"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Empty recommendations are returned', function () {",
+                  "  pm.expect(pm.response.json()).to.eql({ events: [] });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Recommendations Without Auth",
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/recommendations",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "recommendations"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -3841,6 +4371,50 @@
     {
       "key": "waited_for_ttl",
       "value": "false"
+    },
+    {
+      "key": "recommendation_event_id",
+      "value": ""
+    },
+    {
+      "key": "recommendation_duplicate_event_id",
+      "value": ""
+    },
+    {
+      "key": "recommendation_alt_event_id",
+      "value": ""
+    },
+    {
+      "key": "recommendation_event_title",
+      "value": "neo4j expo by elina {{run_id}}"
+    },
+    {
+      "key": "recommendation_alt_title",
+      "value": "redis graph afterparty {{run_id}}"
+    },
+    {
+      "key": "recommendation_event_started_at",
+      "value": "2026-06-05T19:00:00+03:00"
+    },
+    {
+      "key": "recommendation_event_finished_at",
+      "value": "2026-06-05T21:00:00+03:00"
+    },
+    {
+      "key": "recommendation_duplicate_started_at",
+      "value": "2026-06-03T19:00:00+03:00"
+    },
+    {
+      "key": "recommendation_duplicate_finished_at",
+      "value": "2026-06-03T21:00:00+03:00"
+    },
+    {
+      "key": "recommendation_alt_started_at",
+      "value": "2026-06-07T19:00:00+03:00"
+    },
+    {
+      "key": "recommendation_alt_finished_at",
+      "value": "2026-06-07T22:00:00+03:00"
     }
   ],
   "event": [

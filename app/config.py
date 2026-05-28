@@ -7,11 +7,16 @@ def require_env(name: str) -> str:
         raise RuntimeError(f"Environment variable {name} is required")
     return value
 
+
+def optional_env(name: str) -> str | None:
+    return os.getenv(name)
+
 APP_HOST = require_env("APP_HOST")
 APP_PORT = int(require_env("APP_PORT"))
 SESSION_TTL = int(require_env("APP_USER_SESSION_TTL"))
 APP_LIKE_TTL = int(require_env("APP_LIKE_TTL"))
 APP_EVENT_REVIEWS_TTL = int(require_env("APP_EVENT_REVIEWS_TTL"))
+APP_RECOMMENDATIONS_TTL = int(require_env("APP_RECOMMENDATIONS_TTL"))
 
 REDIS_HOST = require_env("REDIS_HOST")
 REDIS_PORT = int(require_env("REDIS_PORT"))
@@ -35,3 +40,9 @@ CASSANDRA_USERNAME = require_env("CASSANDRA_USERNAME") or None
 CASSANDRA_PASSWORD = require_env("CASSANDRA_PASSWORD") or None
 CASSANDRA_KEYSPACE = require_env("CASSANDRA_KEYSPACE")
 CASSANDRA_CONSISTENCY = require_env("CASSANDRA_CONSISTENCY").upper()
+
+NEO4J_HOST = require_env("NEO4J_HOST")
+NEO4J_PORT = require_env("NEO4J_PORT")
+NEO4J_URL = optional_env("NEO4J_URL") or f"bolt://{NEO4J_HOST}:{NEO4J_PORT}"
+NEO4J_USERNAME = require_env("NEO4J_USERNAME") or None
+NEO4J_PASSWORD = require_env("NEO4J_PASSWORD") or None

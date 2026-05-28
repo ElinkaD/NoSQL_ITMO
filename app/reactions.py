@@ -3,8 +3,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from pymongo.errors import PyMongoError
-from redis.exceptions import RedisError
 
+from app.cache import delete_cache_key, read_hash, write_hash
 from app.common import parse_include_values
 from app.config import APP_LIKE_TTL
 from app.db import (
@@ -12,7 +12,6 @@ from app.db import (
     consistency_level,
     events_collection,
     get_cassandra_session,
-    redis_cli,
 )
 
 
@@ -36,10 +35,7 @@ def reactions_cache_key(title: str) -> str:
 
 
 def invalidate_reactions_cache(title: str) -> None:
-    try:
-        redis_cli.delete(reactions_cache_key(title))
-    except RedisError as exc:
-        raise StorageUnavailableError("redis") from exc
+    delete_cache_key(reactions_cache_key(title))
 
 
 def _prepare_statements() -> tuple[object, object]:
@@ -87,11 +83,7 @@ def upsert_event_reaction(event_id: str, user_id: str, like_value: int) -> None:
 
 
 def _read_cached_reactions(title: str) -> dict[str, int] | None:
-    try:
-        cached_reactions = redis_cli.hgetall(reactions_cache_key(title))
-    except RedisError as exc:
-        raise StorageUnavailableError("redis") from exc
-
+    cached_reactions = read_hash(reactions_cache_key(title))
     if not cached_reactions:
         return None
 
@@ -108,18 +100,14 @@ def _read_cached_reactions(title: str) -> dict[str, int] | None:
 
 
 def _write_cached_reactions(title: str, reactions: dict[str, int]) -> None:
-    try:
-        cache_key = reactions_cache_key(title)
-        redis_cli.hset(
-            cache_key,
-            mapping={
-                "likes": reactions["likes"],
-                "dislikes": reactions["dislikes"],
-            },
-        )
-        redis_cli.expire(cache_key, APP_LIKE_TTL)
-    except RedisError as exc:
-        raise StorageUnavailableError("redis") from exc
+    write_hash(
+        reactions_cache_key(title),
+        mapping={
+            "likes": reactions["likes"],
+            "dislikes": reactions["dislikes"],
+        },
+        ttl=APP_LIKE_TTL,
+    )
 
 
 def _load_reactions_from_cassandra(event_ids: list[str]) -> dict[str, int] | None:

@@ -9,6 +9,7 @@ services:
       APP_USER_SESSION_TTL: ${APP_USER_SESSION_TTL}
       APP_LIKE_TTL: ${APP_LIKE_TTL}
       APP_EVENT_REVIEWS_TTL: ${APP_EVENT_REVIEWS_TTL}
+      APP_RECOMMENDATIONS_TTL: ${APP_RECOMMENDATIONS_TTL}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -29,6 +30,11 @@ services:
       CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
       CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE}
       CASSANDRA_CONSISTENCY: ${CASSANDRA_CONSISTENCY}
+      NEO4J_URL: ${NEO4J_URL}
+      NEO4J_HOST: ${NEO4J_HOST}
+      NEO4J_PORT: ${NEO4J_PORT}
+      NEO4J_USERNAME: ${NEO4J_USERNAME}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
     ports:
       - "${APP_PORT}:${APP_PORT}"
     depends_on:
@@ -40,6 +46,8 @@ services:
         condition: service_completed_successfully
       mongo-setup:
         condition: service_completed_successfully
+      neo4j:
+        condition: service_healthy
 
   cassandra:
     image: cassandra:5.0
@@ -70,6 +78,23 @@ services:
     command:
       - sh
       - /scripts/init-cluster.sh
+
+  neo4j:
+    image: neo4j:5.26.26-trixie
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+    ports:
+      - "${NEO4J_HTTP_PORT}:${NEO4J_HTTP_PORT}"
+      - "${NEO4J_PORT}:${NEO4J_PORT}"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - cypher-shell -a bolt://localhost:${NEO4J_PORT} -u "${NEO4J_USERNAME}" -p "${NEO4J_PASSWORD}" "RETURN 1" >/dev/null
+      interval: 15s
+      timeout: 10s
+      retries: 20
 
   redis:
     image: redis:7-alpine
@@ -350,6 +375,7 @@ services:
 
 volumes:
   cassandra_data:
+  neo4j_data:
   configsvr01_data:
   configsvr02_data:
   configsvr03_data:
