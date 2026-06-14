@@ -1,270 +1,343 @@
 # EventHub - NoSQL Database Project
+
 [![EventHub](https://github.com/ElinkaD/NoSQL_ITMO/actions/workflows/eventhub.yml/badge.svg)](https://github.com/ElinkaD/NoSQL_ITMO/actions/workflows/eventhub.yml)
 
-Backend-сервис платформы мероприятий для практического изучения NoSQL баз данных.
+EventHub - backend-сервис платформы мероприятий для практического изучения NoSQL-хранилищ. Проект развивается по этапам в рамках лабораторных работ и сохраняет совместимость с предыдущими версиями сервиса.
 
-Проект развивается по этапам в рамках лабораторных работ и сохраняет совместимость с предыдущими версиями сервиса.
+## Технологический стек
 
-## Требования к реализации
+| Компонент | Использование |
+| --- | --- |
+| Python 3 | основной язык приложения |
+| FastAPI | HTTP API и маршрутизация |
+| Uvicorn | ASGI-сервер внутри Docker-контейнера |
+| MongoDB 8.0 sharded cluster | пользователи и мероприятия |
+| Redis 7 | сессии и cache-aside кеши |
+| Cassandra 5.0 | реакции и отзывы к мероприятиям |
+| Neo4j 5 | граф лайков для рекомендаций |
+| Docker Compose | локальный запуск приложения и хранилищ |
+| bcrypt | хеширование паролей |
+| pymongo, redis, cassandra-driver, neo4j | клиенты баз данных |
 
-- используется предоставленный шаблон репозитория [ndbx-template](https://github.com/sitnikovik/ndbx-template)
-- соблюдаются требования к структуре проекта из [CONTRIBUTING.md](https://github.com/sitnikovik/ndbx-template?tab=contributing-ov-file)
-- проект реализован на `python`
-- каждая следующая лабораторная работа развивается поверх предыдущей
-- новая функциональность не должна ломать предыдущие лабы
+## Архитектура проекта
 
-## Lab 5
+```text
+app/
+  main.py                 FastAPI-приложение, роутеры, обработчики ошибок
+  config.py               чтение переменных окружения
+  db.py                   подключения к Redis, MongoDB, Cassandra, Neo4j
+  sessions.py             healthcheck и анонимные/пользовательские сессии
+  users.py                регистрация, login/logout, карточки пользователей
+  events.py               создание, поиск, карточки и редактирование событий
+  reactions.py            реакции, агрегация и кеш счетчиков
+  reviews.py              отзывы, summary и кеш агрегатов
+  recommendations.py      рекомендации на основе графа лайков
+  event_serializers.py    единый формат ответа события
+api/                      Postman-коллекция с примерами запросов
+cassandra/                init-скрипт keyspace и таблиц
+mongodb/                  init-скрипт sharded cluster
+docker-compose.yml        инфраструктура проекта
+```
 
-Текущая версия сервиса реализует
+```mermaid
+flowchart LR
+    Client[Postman / HTTP client] --> API[FastAPI app]
+    API --> Redis[(Redis)]
+    API --> Mongo[(MongoDB sharded cluster)]
+    API --> Cassandra[(Cassandra)]
+    API --> Neo4j[(Neo4j)]
 
-- `GET /health`
-- `POST /session`
-- `POST /users`
-- `GET /users`
-- `GET /users/{id}`
-- `GET /users/{id}/events`
-- `POST /auth/login`
-- `POST /auth/logout`
-- `POST /events`
-- `GET /events`
-- `GET /events/{id}`
-- `PATCH /events/{id}`
-- `POST /events/{event_id}/like`
-- `POST /events/{event_id}/dislike`
-- `POST /event/{event_id}/like`
-- `POST /event/{event_id}/dislike`
+    Redis --> Sessions[session hash sid:*]
+    Redis --> Caches[reactions, reviews, recommendations cache]
+    Mongo --> Users[users]
+    Mongo --> Events[events]
+    Cassandra --> Reactions[event_reactions]
+    Cassandra --> Reviews[event_reviews]
+    Neo4j --> Graph[User-LIKED-Event graph]
+```
 
-### Возможности lab 5
+Основные сущности:
 
-- реакции на мероприятия хранятся в Cassandra
-- счетчики реакций кэшируются в Redis по стратегии cache-aside
-- `GET /events`, `GET /events/{id}`, `GET /users/{id}/events` поддерживают `?include=reactions`
-- реакции агрегируются по названию мероприятия, а не только по одному `event_id`
-- для одинакового `title` можно создавать несколько разных встреч на разное время
-- для автогрейдера поддержан alias `POST /event/{event_id}/like|dislike`
+| Сущность | Где хранится | Назначение |
+| --- | --- | --- |
+| User | MongoDB, Neo4j | пользователь, авторизация, вершина графа рекомендаций |
+| Event | MongoDB, Neo4j | мероприятие, поиск, карточка, вершина графа рекомендаций |
+| Session | Redis | `X-Session-Id`, TTL и связь с авторизованным пользователем |
+| Reaction | Cassandra, Redis cache, Neo4j | like/dislike пользователя к мероприятию |
+| Review | Cassandra, Redis cache | отзыв пользователя и агрегированный рейтинг |
 
-## Lab 6
+## Функциональные требования / Use Cases
 
-Текущая версия сервиса дополнительно реализует
+- Пользователь может создать анонимную сессию, зарегистрироваться, войти и выйти из аккаунта.
+- Авторизованный пользователь может создавать мероприятия и редактировать свои события.
+- Любой пользователь может искать пользователей и мероприятия по фильтрам.
+- Авторизованный пользователь может ставить лайк или дизлайк мероприятию.
+- Авторизованный пользователь может оставить один отзыв на мероприятие и редактировать его.
+- Списки и карточки мероприятий могут возвращать агрегаты `reactions` и `reviews` через параметр `include`.
+- Авторизованный пользователь может получить рекомендации мероприятий на основе лайков похожих пользователей.
 
-- `POST /events/{event_id}/reviews`
-- `GET /events/{event_id}/reviews`
-- `PATCH /events/{event_id}/reviews/{review_id}`
-- `GET /events`, `GET /events/{id}`, `GET /users/{id}/events` поддерживают `?include=reviews`
+## API
 
-## Lab 7
+Postman-коллекция с примерами запросов и ответов размещена в [api/52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595.json](api/52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595.json).
 
-Текущая версия сервиса дополнительно реализует
+Базовый URL локального запуска:
 
-- `GET /recommendations`
+```text
+http://localhost:8080
+```
 
-### Возможности lab 7
+Основные endpoint'ы:
 
-- рекомендации мероприятий строятся по графу лайков в Neo4j
-- рекомендации доступны только авторизованному пользователю и только для самого себя
-- рекомендации кэшируются в Redis по стратегии cache-aside
-- в рекомендациях не возвращаются мероприятия, которые пользователь уже лайкал
-- если в рекомендации попадает несколько событий с одинаковым `title`, возвращается только ближайшее по `started_at`
-- рекомендации сортируются по релевантности: от большего числа лайков к меньшему
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `GET` | `/health` | проверка состояния приложения |
+| `POST` | `/session` | создать или продлить сессию |
+| `POST` | `/users` | зарегистрировать пользователя |
+| `GET` | `/users` | список пользователей |
+| `GET` | `/users/{id}` | карточка пользователя |
+| `GET` | `/users/{id}/events` | события пользователя |
+| `POST` | `/auth/login` | вход |
+| `POST` | `/auth/logout` | выход |
+| `POST` | `/events` | создать мероприятие |
+| `GET` | `/events` | список мероприятий |
+| `GET` | `/events/{id}` | карточка мероприятия |
+| `PATCH` | `/events/{id}` | редактировать свое мероприятие |
+| `POST` | `/events/{event_id}/like` | поставить лайк |
+| `POST` | `/events/{event_id}/dislike` | поставить дизлайк |
+| `POST` | `/event/{event_id}/like` | alias для autograder |
+| `POST` | `/event/{event_id}/dislike` | alias для autograder |
+| `POST` | `/events/{event_id}/reviews` | создать отзыв |
+| `GET` | `/events/{event_id}/reviews` | список отзывов |
+| `PATCH` | `/events/{event_id}/reviews/{review_id}` | редактировать свой отзыв |
+| `GET` | `/recommendations` | рекомендации для текущего пользователя |
 
-## Совместимость с предыдущими лабами
+Поддерживаемые query-параметры списков:
 
-Сервис сохраняет
+- `limit`, `offset`
+- `id`, `title`, `category`, `price_from`, `price_to`, `city`, `user`
+- `date_from`, `date_to` в формате `YYYY-MM-DD`
+- `include=reactions`, `include=reviews`, `include=reactions,reviews`
 
-- `GET /health` из lab 1
-- механику анонимных Redis-сессий из lab 2
-- регистрацию пользователей, login/logout и базовую работу с событиями из lab 3
-- поиск, карточки и редактирование событий из lab 4
-- реакции из lab 5
-- отзывы и summary по ним из lab 6
+Примеры запросов:
 
-Уточнения
+```bash
+curl -i http://localhost:8080/health
+```
 
-- `GET /health` возвращает ровно `{"status":"ok"}`
-- `GET /health` не создает сессию и не продлевает ttl
-- `POST /session` создает новую сессию или продлевает существующую
-- одинаковые названия событий теперь допустимы, потому что lab 5 требует агрегацию реакций по `title`
+```json
+{"status":"ok"}
+```
 
-## Архитектура хранения
+```bash
+curl -i -X POST http://localhost:8080/users \
+  -H "Content-Type: application/json" \
+  -d '{"full_name":"Elina Dusaeva","username":"elina","password":"secret"}'
+```
 
-### Redis
+```http
+HTTP/1.1 201 Created
+Set-Cookie: X-Session-Id=<sid>; HttpOnly; Path=/; Max-Age=60
+```
 
-Redis хранит
+```bash
+curl -i -X POST http://localhost:8080/events \
+  -H "Cookie: X-Session-Id=<sid>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"NoSQL meetup","address":"Kronverksky pr. 49","city":"Saint Petersburg","started_at":"2026-06-10T10:00:00Z","finished_at":"2026-06-10T12:00:00Z","category":"education","price":0,"description":"Database meetup"}'
+```
 
-- сессии по ключам `sid:{session_id}`
-- кэш счетчиков реакций по ключам `event:{md5(title)}:reactions`
-- кэш агрегатов отзывов по ключам `event:{md5(title)}:reviews`
-- кэш рекомендаций по ключам `user:{user_id}:recomms`
+```json
+{"id":"665f1d4f1f7a2a0012a00001"}
+```
 
-Внутри session hash хранятся
-
-- `created_at`
-- `updated_at`
-- `user_id` если пользователь авторизован
-
-В кэше реакций хранится JSON вида
+```bash
+curl -i "http://localhost:8080/events/<event_id>?include=reactions,reviews"
+```
 
 ```json
 {
-  "likes": 1,
-  "dislikes": 0
+  "id": "665f1d4f1f7a2a0012a00001",
+  "title": "NoSQL meetup",
+  "location": {"address": "Kronverksky pr. 49", "city": "Saint Petersburg"},
+  "created_at": "2026-06-06T10:00:00Z",
+  "created_by": "<user_id>",
+  "started_at": "2026-06-10T10:00:00Z",
+  "finished_at": "2026-06-10T12:00:00Z",
+  "category": "education",
+  "price": 0,
+  "description": "Database meetup",
+  "reactions": {"likes": 1, "dislikes": 0},
+  "reviews": {"count": 1, "rating": 5.0}
 }
 ```
 
-В кэше отзывов хранится JSON вида
-
-```json
-{
-  "count": 3,
-  "rating": 4.7
-}
-```
-
-В кэше рекомендаций в Redis hash хранится поле `events` со списком мероприятий в JSON
-
-### MongoDB
-
-Mongo используется в режиме sharded cluster
-
-- `configReplSet`
-- `shard1ReplSet`
-- `shard2ReplSet`
-- отдельный `mongos`
-
-Коллекции
-
-- `users`
-- `events`
-
-Коллекция `events` зашардирована по ключу `{ created_by: "hashed" }`.
-
-### Cassandra
-
-Cassandra используется как основное хранилище реакций.
-
-Создается keyspace `CASSANDRA_KEYSPACE` и таблица `event_reactions`
-
-- `event_id text`
-- `created_by text`
-- `like_value tinyint`
-- `created_at timestamp`
-
-Первичный ключ
-
-- `PRIMARY KEY ((event_id), created_by)`
-
-### Neo4j
-
-Neo4j используется как граф рекомендаций.
-
-Узлы
-
-- `(:User {id})`
-- `(:Event {id, title})`
-
-Связи
-
-- `(user)-[:LIKED]->(event)`
-
-Граф обновляется при
-
-- создании пользователя
-- создании события
-- постановке лайка
-
-Дизлайки не удаляют связь `LIKED`, потому что lab 7 учитывает только сам факт лайка.
-
-Также создаются secondary indexes по
-
-- `created_by`
-- `like_value`
-
-Также создается таблица `event_reviews`
-
-- `event_id text`
-- `created_by text`
-- `id uuid`
-- `rating tinyint`
-- `comment text`
-- `created_at timestamp`
-- `updated_at timestamp`
-
-Первичный ключ
-
-- `PRIMARY KEY ((event_id), created_by)`
-
-## Конфигурация
-
-Основной конфигурационный файл проекта это `.env.local`
-
-```env
-APP_HOST=localhost
-APP_PORT=8080
-APP_USER_SESSION_TTL=60
-APP_LIKE_TTL=60
-APP_EVENT_REVIEWS_TTL=120
-APP_RECOMMENDATIONS_TTL=60
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_PASSWORD=rediselina2003
-REDIS_DB=0
-REDIS_SOCKET_CONNECT_TIMEOUT=2
-REDIS_SOCKET_TIMEOUT=2
-
-MONGODB_DATABASE=eventhub
-MONGODB_USER=
-MONGODB_PASSWORD=
-MONGODB_HOST=mongos
-MONGODB_PORT=27017
-MONGODB_APP_USER=eventhub
-MONGODB_APP_PASSWORD=eventhub
-MONGODB_SERVER_SELECTION_TIMEOUT_MS=2000
-MONGODB_CONNECT_TIMEOUT_MS=2000
-MONGODB_SOCKET_TIMEOUT_MS=2000
-
-CASSANDRA_HOSTS=cassandra
-CASSANDRA_PORT=9042
-CASSANDRA_USERNAME=
-CASSANDRA_PASSWORD=
-CASSANDRA_KEYSPACE=testkeyspace
-CASSANDRA_CONSISTENCY=ONE
-
-NEO4J_HTTP_PORT=7474
-NEO4J_HOST=neo4j
-NEO4J_PORT=7687
-NEO4J_BOLT_PORT=7687
-NEO4J_URL=bolt://neo4j:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=password
-```
-
-`MONGODB_USER` и `MONGODB_PASSWORD` используются приложением.
-
-`MONGODB_APP_USER` и `MONGODB_APP_PASSWORD` создаются init-скриптом внутри кластера.
-
-## Запуск
+## Инструкция по запуску
+Запуск всех сервисов:
 
 ```bash
 make run
+```
+
+Проверка состояния контейнеров:
+
+```bash
 make services
 ```
 
-Остановка
+Остановка:
 
 ```bash
 make stop
 ```
 
-Полная очистка контейнеров и volume
+Полная очистка контейнеров и volume:
 
 ```bash
 make clean
 ```
 
-## Проверка хранилищ
+После запуска приложение доступно на `http://localhost:8080`.
 
-Проверить список Mongo-шардов
+## Конфигурация
+
+Основной конфигурационный файл проекта - `.env.local`.
+
+| Переменная | Описание | Значение по умолчанию |
+| --- | --- | --- |
+| `APP_HOST` | host приложения | `localhost` |
+| `APP_PORT` | порт приложения | `8080` |
+| `APP_USER_SESSION_TTL` | TTL пользовательской сессии в секундах | `60` |
+| `APP_LIKE_TTL` | TTL кеша реакций в секундах | `60` |
+| `APP_EVENT_REVIEWS_TTL` | TTL кеша summary отзывов в секундах | `120` |
+| `APP_RECOMMENDATIONS_TTL` | TTL кеша рекомендаций в секундах | `60` |
+| `REDIS_HOST` | host Redis внутри compose-сети | `redis` |
+| `REDIS_PORT` | порт Redis | `6379` |
+| `REDIS_PASSWORD` | пароль Redis | `rediselina2003` |
+| `REDIS_DB` | номер Redis DB | `0` |
+| `REDIS_SOCKET_CONNECT_TIMEOUT` | timeout подключения к Redis | `2` |
+| `REDIS_SOCKET_TIMEOUT` | socket timeout Redis | `2` |
+| `MONGODB_DATABASE` | база приложения | `eventhub` |
+| `MONGODB_USER` | пользователь MongoDB для приложения | пусто |
+| `MONGODB_PASSWORD` | пароль MongoDB для приложения | пусто |
+| `MONGODB_HOST` | host mongos | `mongos` |
+| `MONGODB_PORT` | порт mongos | `27017` |
+| `MONGODB_CONFIGSVR01_PORT` | порт config server 01 | `27019` |
+| `MONGODB_CONFIGSVR02_PORT` | порт config server 02 | `27020` |
+| `MONGODB_CONFIGSVR03_PORT` | порт config server 03 | `27021` |
+| `MONGODB_SHARD1_01_PORT` | порт shard1 node 01 | `27118` |
+| `MONGODB_SHARD1_02_PORT` | порт shard1 node 02 | `27119` |
+| `MONGODB_SHARD1_03_PORT` | порт shard1 node 03 | `27120` |
+| `MONGODB_SHARD2_01_PORT` | порт shard2 node 01 | `27218` |
+| `MONGODB_SHARD2_02_PORT` | порт shard2 node 02 | `27219` |
+| `MONGODB_SHARD2_03_PORT` | порт shard2 node 03 | `27220` |
+| `MONGODB_APP_USER` | пользователь, создаваемый init-скриптом | `eventhub` |
+| `MONGODB_APP_PASSWORD` | пароль пользователя init-скрипта | `eventhub` |
+| `MONGODB_SERVER_SELECTION_TIMEOUT_MS` | timeout выбора MongoDB server | `2000` |
+| `MONGODB_CONNECT_TIMEOUT_MS` | timeout подключения MongoDB | `2000` |
+| `MONGODB_SOCKET_TIMEOUT_MS` | socket timeout MongoDB | `2000` |
+| `CASSANDRA_HOSTS` | список Cassandra host'ов | `cassandra` |
+| `CASSANDRA_PORT` | порт Cassandra | `9042` |
+| `CASSANDRA_USERNAME` | пользователь Cassandra | пусто |
+| `CASSANDRA_PASSWORD` | пароль Cassandra | пусто |
+| `CASSANDRA_KEYSPACE` | keyspace приложения | `testkeyspace` |
+| `CASSANDRA_CONSISTENCY` | consistency level | `ONE` |
+| `NEO4J_HTTP_PORT` | HTTP-порт Neo4j browser | `7474` |
+| `NEO4J_HOST` | host Neo4j | `neo4j` |
+| `NEO4J_PORT` | Bolt-порт Neo4j | `7687` |
+| `NEO4J_BOLT_PORT` | Bolt-порт Neo4j в compose | `7687` |
+| `NEO4J_URL` | Bolt URL приложения | `bolt://neo4j:7687` |
+| `NEO4J_USERNAME` | пользователь Neo4j | `neo4j` |
+| `NEO4J_PASSWORD` | пароль Neo4j | `password` |
+
+`MONGODB_APP_USER` и `MONGODB_APP_PASSWORD` используются init-скриптом MongoDB. Приложение читает `MONGODB_USER` и `MONGODB_PASSWORD`; в текущей локальной конфигурации они пустые.
+
+## Хранилища
+
+### Redis
+
+Redis хранит:
+
+- сессии по ключам `sid:{session_id}`;
+- кеш счетчиков реакций по ключам `event:{md5(title)}:reactions`;
+- кеш агрегатов отзывов по ключам `event:{md5(title)}:reviews`;
+- кеш рекомендаций по ключам `user:{user_id}:recomms`.
+
+В session hash хранятся `created_at`, `updated_at` и `user_id` для авторизованного пользователя.
+
+### MongoDB
+
+MongoDB используется в режиме sharded cluster:
+
+- `configReplSet`;
+- `shard1ReplSet`;
+- `shard2ReplSet`;
+- отдельный `mongos`.
+
+Коллекции приложения:
+
+- `users`;
+- `events`.
+
+Коллекция `events` шардирована по ключу `{ created_by: "hashed" }`.
+
+### Cassandra
+
+Cassandra хранит реакции и отзывы:
+
+- keyspace `CASSANDRA_KEYSPACE`;
+- таблица `event_reactions`;
+- таблица `event_reviews`.
+
+`event_reactions`:
+
+```sql
+PRIMARY KEY ((event_id), created_by)
+```
+
+`event_reviews`:
+
+```sql
+PRIMARY KEY ((event_id), created_by)
+```
+
+### Neo4j
+
+Neo4j хранит граф рекомендаций:
+
+- `(:User {id})`;
+- `(:Event {id, title})`;
+- `(user)-[:LIKED]->(event)`.
+
+Граф обновляется при создании пользователя, создании события и постановке лайка. Дизлайк не удаляет связь `LIKED`, потому что рекомендации учитывают сам факт лайка.
+
+## Тестирование
+
+Ручное тестирование API выполнялось через Postman по коллекции из каталога `api/`. Коллекция покрывает:
+
+- `health` и `session`;
+- регистрацию, login/logout;
+- поиск пользователей и мероприятий;
+- карточки пользователей и событий;
+- создание и редактирование мероприятий;
+- реакции и `include=reactions`;
+- отзывы и `include=reviews`;
+- рекомендации;
+- негативные сценарии `400`, `401`, `404`.
+
+При создании merge request проект дополнительно проверяется через autograder из репозитория курса: [sitnikovik/ndbx/autograder](https://github.com/sitnikovik/ndbx/tree/main/autograder). Для совместимости с autograder сохранены endpoint'ы предыдущих лабораторных работ и alias-роуты:
+
+- `POST /event/{event_id}/like`;
+- `POST /event/{event_id}/dislike`.
+
+Быстрая smoke-проверка локального запуска:
+
+```bash
+curl -i http://localhost:8080/health
+curl -i -X POST http://localhost:8080/session
+curl -i http://localhost:8080/events
+```
+
+Проверка MongoDB shard'ов:
 
 ```bash
 docker compose --env-file .env.local exec -T mongos \
@@ -272,36 +345,14 @@ docker compose --env-file .env.local exec -T mongos \
   --eval 'db.adminCommand({ listShards: 1 })'
 ```
 
-Проверить что `events` зашардирована
-
-```bash
-docker compose --env-file .env.local exec -T mongos \
-  mongosh --quiet --port 27017 \
-  --eval 'db.getSiblingDB("config").collections.findOne({ _id: "eventhub.events" })'
-```
-
-Проверить статус Cassandra
-
-```bash
-docker compose --env-file .env.local exec -T cassandra \
-  cqlsh -e "DESCRIBE KEYSPACES"
-```
-
-Проверить таблицу реакций
+Проверка Cassandra:
 
 ```bash
 docker compose --env-file .env.local exec -T cassandra \
   cqlsh -e "DESCRIBE TABLE testkeyspace.event_reactions"
 ```
 
-Проверить таблицу отзывов
-
-```bash
-docker compose --env-file .env.local exec -T cassandra \
-  cqlsh -e "DESCRIBE TABLE testkeyspace.event_reviews"
-```
-
-Проверить граф Neo4j
+Проверка Neo4j:
 
 ```bash
 docker compose --env-file .env.local exec -T neo4j \
@@ -309,45 +360,14 @@ docker compose --env-file .env.local exec -T neo4j \
   "MATCH (n) RETURN labels(n), count(*)"
 ```
 
-## Postman коллекция
+## Совместимость с лабораторными работами
 
-Для проверки приложения используйте коллекцию
+Сервис сохраняет:
 
-- [api/52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595.json](/home/elina/itmo/NoSQL_ITMO/api/52399890-60f7994f-573a-4e39-8b98-ce0c23e4e595.json)
-
-Коллекция покрывает
-
-- сценарии lab 2 по `health` и `session`
-- сценарии lab 3 по регистрации пользователей и авторизации
-- сценарии lab 4 по поиску пользователей и событий
-- сценарии lab 5 по реакциям и `include=reactions`
-- сценарии lab 6 по отзывам и `include=reviews`
-- сценарии lab 7 по рекомендациям и кэшу рекомендаций
-- карточки пользователей и событий
-- редактирование событий
-- негативные сценарии `400`, `401`, `404`
-
-## Примеры быстрых команд
-
-```bash
-curl -i http://localhost:8080/health
-
-curl -i -X POST http://localhost:8080/session
-
-curl -i -X POST http://localhost:8080/event/<event_id>/like \
-  -H 'Cookie: X-Session-Id=<sid>'
-
-curl -i "http://localhost:8080/events/<event_id>?include=reactions"
-
-curl -i -X POST http://localhost:8080/events/<event_id>/reviews \
-  -H 'Cookie: X-Session-Id=<sid>' \
-  -H 'Content-Type: application/json' \
-  -d '{"comment":"Отличное событие","rating":5}'
-
-curl -i "http://localhost:8080/events/<event_id>/reviews?limit=10&offset=0"
-
-curl -i "http://localhost:8080/events/<event_id>?include=reactions,reviews"
-
-curl -i http://localhost:8080/recommendations \
-  -H 'Cookie: X-Session-Id=<sid>'
-```
+- `GET /health` из lab 1;
+- анонимные Redis-сессии из lab 2;
+- регистрацию, login/logout и базовую работу с событиями из lab 3;
+- поиск, карточки и редактирование событий из lab 4;
+- реакции из lab 5;
+- отзывы и summary из lab 6;
+- рекомендации из lab 7.
